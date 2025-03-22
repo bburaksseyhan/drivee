@@ -10,68 +10,51 @@ export class LandscapeManager {
         this.roadWidth = roadWidth;
         this.currentSeason = 'spring'; // Default season
         this.seasonNotification = null;
-        this.seasonDisplay = null;
         this.gaugeManager = new GaugeManager();
         this.createSeasonNotification();
-        this.createSeasonDisplay();
     }
 
     createSeasonNotification() {
         this.seasonNotification = document.createElement('div');
         this.seasonNotification.style.position = 'absolute';
         this.seasonNotification.style.top = '80px';
-        this.seasonNotification.style.right = '20px';
+        this.seasonNotification.style.left = '50%';
+        this.seasonNotification.style.transform = 'translateX(-50%)';
         this.seasonNotification.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
         this.seasonNotification.style.color = 'white';
-        this.seasonNotification.style.padding = '10px';
-        this.seasonNotification.style.borderRadius = '5px';
+        this.seasonNotification.style.padding = '10px 20px';
+        this.seasonNotification.style.borderRadius = '10px';
         this.seasonNotification.style.fontFamily = 'Arial, sans-serif';
-        this.seasonNotification.style.fontSize = '16px';
+        this.seasonNotification.style.fontSize = '18px';
         this.seasonNotification.style.display = 'none';
         this.seasonNotification.style.zIndex = '1000';
+        this.seasonNotification.style.backdropFilter = 'blur(5px)';
+        this.seasonNotification.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         document.body.appendChild(this.seasonNotification);
     }
 
-    createSeasonDisplay() {
-        this.seasonDisplay = document.createElement('div');
-        this.seasonDisplay.style.position = 'absolute';
-        this.seasonDisplay.style.top = '140px';
-        this.seasonDisplay.style.right = '20px';
-        this.seasonDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.seasonDisplay.style.color = 'white';
-        this.seasonDisplay.style.padding = '10px';
-        this.seasonDisplay.style.borderRadius = '5px';
-        this.seasonDisplay.style.fontFamily = 'Arial, sans-serif';
-        this.seasonDisplay.style.fontSize = '16px';
-        this.seasonDisplay.style.zIndex = '1000';
-        this.updateSeasonDisplay();
-        document.body.appendChild(this.seasonDisplay);
-    }
-
-    updateSeasonDisplay() {
+    showSeasonNotification(season, time, distance) {
         const seasonEmoji = {
             'spring': '🌸',
             'summer': '☀️',
             'autumn': '🍂',
             'winter': '❄️'
         };
-        const seasonColors = {
-            'spring': '#98FB98',
-            'summer': '#32CD32',
-            'autumn': '#FF8C00',
-            'winter': '#FFFFFF'
-        };
-        this.seasonDisplay.innerHTML = `Current Season: ${seasonEmoji[this.currentSeason]} ${this.currentSeason.charAt(0).toUpperCase() + this.currentSeason.slice(1)}`;
-        this.seasonDisplay.style.borderLeft = `4px solid ${seasonColors[this.currentSeason]}`;
-    }
-
-    showSeasonNotification(season, time, distance) {
+        
         const minutes = Math.floor(time / 60);
         const seconds = Math.floor(time % 60);
         const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         const distanceKm = (distance / 1000).toFixed(1);
         
-        this.seasonNotification.textContent = `Season changed to ${season}! (Time: ${formattedTime}, Distance: ${distanceKm}km)`;
+        this.seasonNotification.innerHTML = `
+            <div style="text-align: center;">
+                <div style="font-size: 20px; margin-bottom: 5px;">
+                    ${seasonEmoji[season]} Season changed to ${season.charAt(0).toUpperCase() + season.slice(1)} ${seasonEmoji[season]}
+                </div>
+                <div style="font-size: 16px; color: #aaa;">
+                    Time: ${formattedTime} | Distance: ${distanceKm}km
+                </div>
+            </div>`;
         this.seasonNotification.style.display = 'block';
         
         // Hide notification after 3 seconds
@@ -248,8 +231,6 @@ export class LandscapeManager {
 
         // Show notification with time and distance
         this.showSeasonNotification(season, time, distance);
-        // Update the season display
-        this.updateSeasonDisplay();
     }
 
     updateSpeedometer(speed) {

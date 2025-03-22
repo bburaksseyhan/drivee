@@ -8,6 +8,7 @@ import { VehicleManager } from './managers/VehicleManager.js';
 import { LandscapeManager } from './managers/LandscapeManager.js';
 import { GaugeManager } from './managers/GaugeManager.js';
 import { MovingObstacleManager } from './managers/MovingObstacleManager.js';
+import { HistoryManager } from './managers/HistoryManager.js';
 
 export class Game {
     constructor() {
@@ -69,6 +70,7 @@ export class Game {
         this.roadManager = null;
         this.landscapeManager = null;
         this.gaugeManager = null;
+        this.historyManager = null;
 
         // Game tracking stats
         this.distance = 0;
@@ -132,23 +134,64 @@ export class Game {
     }
 
     createScoreDisplay() {
-        this.scoreDiv = document.createElement('div');
-        this.scoreDiv.style.position = 'absolute';
-        this.scoreDiv.style.top = '20px';
-        this.scoreDiv.style.right = '20px';
-        this.scoreDiv.style.color = 'white';
-        this.scoreDiv.style.fontSize = '18px'; // Smaller font to fit more info
-        this.scoreDiv.style.fontFamily = 'Arial, sans-serif';
-        this.scoreDiv.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-        this.scoreDiv.style.textAlign = 'right';
-        this.scoreDiv.style.padding = '10px';
-        this.scoreDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-        this.scoreDiv.style.borderRadius = '5px';
-        document.body.appendChild(this.scoreDiv);
-        this.updateScoreDisplay();
+        // Create main dashboard container
+        this.dashboardDiv = document.createElement('div');
+        this.dashboardDiv.style.position = 'absolute';
+        this.dashboardDiv.style.top = '20px';
+        this.dashboardDiv.style.right = '20px';
+        this.dashboardDiv.style.display = 'flex';
+        this.dashboardDiv.style.flexDirection = 'column';
+        this.dashboardDiv.style.gap = '10px';
+        this.dashboardDiv.style.fontFamily = 'Arial, sans-serif';
+        this.dashboardDiv.style.zIndex = '1000';
+
+        // Create centered season display
+        this.seasonDiv = document.createElement('div');
+        this.seasonDiv.style.position = 'absolute';
+        this.seasonDiv.style.top = '20px';
+        this.seasonDiv.style.left = '50%';
+        this.seasonDiv.style.transform = 'translateX(-50%)';
+        this.seasonDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.seasonDiv.style.padding = '10px 20px';
+        this.seasonDiv.style.borderRadius = '10px';
+        this.seasonDiv.style.color = 'white';
+        this.seasonDiv.style.textAlign = 'center';
+        this.seasonDiv.style.backdropFilter = 'blur(5px)';
+        this.seasonDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        this.seasonDiv.style.zIndex = '1000';
+        document.body.appendChild(this.seasonDiv);
+
+        // Current Stats Panel
+        this.currentStatsDiv = document.createElement('div');
+        this.currentStatsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.currentStatsDiv.style.padding = '15px';
+        this.currentStatsDiv.style.borderRadius = '10px';
+        this.currentStatsDiv.style.color = 'white';
+        this.currentStatsDiv.style.minWidth = '200px';
+        this.currentStatsDiv.style.backdropFilter = 'blur(5px)';
+        this.currentStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        this.dashboardDiv.appendChild(this.currentStatsDiv);
+
+        // Best Stats Panel
+        this.bestStatsDiv = document.createElement('div');
+        this.bestStatsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.bestStatsDiv.style.padding = '15px';
+        this.bestStatsDiv.style.borderRadius = '10px';
+        this.bestStatsDiv.style.color = 'white';
+        this.bestStatsDiv.style.minWidth = '200px';
+        this.bestStatsDiv.style.backdropFilter = 'blur(5px)';
+        this.bestStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        this.dashboardDiv.appendChild(this.bestStatsDiv);
+
+        document.body.appendChild(this.dashboardDiv);
         
         // Create pause button
         this.createPauseButton();
+
+        // Initialize the history manager's UI elements
+        if (this.historyManager) {
+            this.historyManager.init();
+        }
     }
 
     updateScoreDisplay() {
@@ -156,10 +199,73 @@ export class Game {
         const seconds = Math.floor(this.elapsedTime % 60);
         const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         const distanceKm = (this.distance / 1000).toFixed(1);
+        const healthPercentage = Math.ceil((this.health / this.maxHealth) * 100);
         
-        this.scoreDiv.innerHTML = `Score: ${this.score}<br>
-                                 Distance: ${distanceKm} km<br>
-                                 Time: ${formattedTime}`;
+        // Update season display
+        const seasonEmoji = this.currentSeason === 'spring' ? '🌸' : 
+                           this.currentSeason === 'summer' ? '☀️' : 
+                           this.currentSeason === 'autumn' ? '🍂' : '❄️';
+        
+        const seasonText = `Current Season: ${seasonEmoji} ${this.currentSeason.charAt(0).toUpperCase() + this.currentSeason.slice(1)}`;
+        this.seasonDiv.innerHTML = `<div style="font-size: 18px; color: #BA68C8;">${seasonText}</div>`;
+
+        // Get health color based on percentage
+        let healthColor = '#4CAF50'; // Green
+        if (healthPercentage < 30) {
+            healthColor = '#f44336'; // Red
+        } else if (healthPercentage < 60) {
+            healthColor = '#ff9800'; // Orange
+        }
+
+        // Update current stats
+        this.currentStatsDiv.innerHTML = `
+            <div style="font-size: 20px; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px;">
+                Current Game
+            </div>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;">
+                <span>🎯 Score:</span>
+                <span style="text-align: right; color: #64B5F6;">${this.score}</span>
+                
+                <span>🛣️ Distance:</span>
+                <span style="text-align: right; color: #81C784;">${distanceKm} km</span>
+                
+                <span>⏱️ Time:</span>
+                <span style="text-align: right; color: #FFB74D;">${formattedTime}</span>
+                
+                <span>❤️ Health:</span>
+                <span style="text-align: right; color: ${healthColor};">${healthPercentage}%</span>
+            </div>`;
+
+        // Get best stats from history manager
+        const bestStats = this.historyManager ? this.historyManager.getBestStats() : { score: 0, distance: 0, time: 0 };
+        const bestTime = this.formatTime(bestStats.time || 0);
+        const bestDistance = ((bestStats.distance || 0) / 1000).toFixed(1);
+
+        // Update best stats
+        this.bestStatsDiv.innerHTML = `
+            <div style="font-size: 20px; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px;">
+                Best Records 🏆
+            </div>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;">
+                <span>🎯 High Score:</span>
+                <span style="text-align: right; color: #64B5F6;">${bestStats.score || 0}</span>
+                
+                <span>🛣️ Best Distance:</span>
+                <span style="text-align: right; color: #81C784;">${bestDistance} km</span>
+                
+                <span>⏱️ Best Time:</span>
+                <span style="text-align: right; color: #FFB74D;">${bestTime}</span>
+            </div>`;
+    }
+
+    createHealthDisplay() {
+        // Health is now integrated into the main dashboard
+        // This method is kept for compatibility but doesn't need to create a separate display
+    }
+
+    updateHealthDisplay() {
+        // Health updates are now handled in updateScoreDisplay
+        this.updateScoreDisplay();
     }
 
     createPauseButton() {
@@ -316,6 +422,10 @@ export class Game {
         );
         this.levelManager = new LevelManager(this);
         this.vehicleManager = new VehicleManager(this.scene);
+        
+        // Initialize history manager
+        this.historyManager = new HistoryManager();
+        this.historyManager.init();
         
         // Initialize UFOs
         this.ufos = [];
@@ -1068,6 +1178,14 @@ export class Game {
             return;
         }
 
+        // Check if health is 0 or below
+        if (this.health <= 0) {
+            this.health = 0; // Ensure health doesn't go below 0
+            this.updateHealthDisplay();
+            this.gameOver();
+            return;
+        }
+
         const delta = this.clock.getDelta();
 
         // Update time tracking
@@ -1208,11 +1326,14 @@ export class Game {
             this.pauseButton.style.display = 'none';
         }
         
-        // Calculate final stats
-        const distanceKm = (this.distance / 1000).toFixed(1);
-        const minutes = Math.floor(this.elapsedTime / 60);
-        const seconds = Math.floor(this.elapsedTime % 60);
-        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        // Save game stats
+        const distanceKm = this.distance / 1000;
+        this.historyManager.saveGameStats(
+            this.score,
+            distanceKm,
+            this.elapsedTime,
+            this.levelManager.currentLevel
+        );
         
         // Display game over message with stats
         const gameOverDiv = document.createElement('div');
@@ -1231,7 +1352,7 @@ export class Game {
             <div style="font-size: 24px; margin: 20px 0;">
                 Final Health: ${Math.max(0, Math.ceil(this.health))}%<br>
                 Score: ${this.score}<br>
-                Distance: ${(this.distance / 1000).toFixed(1)} km<br>
+                Distance: ${distanceKm.toFixed(1)} km<br>
                 Time: ${this.formatTime(this.elapsedTime)}<br>
                 Level: ${this.levelManager.currentLevel}
             </div>
@@ -2144,33 +2265,6 @@ export class Game {
         animate();
     }
 
-    createHealthDisplay() {
-        this.healthDiv = document.createElement('div');
-        this.healthDiv.style.position = 'absolute';
-        this.healthDiv.style.top = '95px';
-        this.healthDiv.style.right = '20px';
-        this.healthDiv.style.color = 'white';
-        this.healthDiv.style.fontSize = '18px';
-        this.healthDiv.style.fontFamily = 'Arial, sans-serif';
-        this.healthDiv.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-        this.healthDiv.style.padding = '10px';
-        this.healthDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-        this.healthDiv.style.borderRadius = '5px';
-        document.body.appendChild(this.healthDiv);
-        this.updateHealthDisplay();
-    }
-
-    updateHealthDisplay() {
-        const healthPercentage = (this.health / this.maxHealth) * 100;
-        let color = '#4CAF50'; // Green
-        if (healthPercentage < 30) {
-            color = '#f44336'; // Red
-        } else if (healthPercentage < 60) {
-            color = '#ff9800'; // Orange
-        }
-        this.healthDiv.innerHTML = `Health: <span style="color: ${color}">${Math.ceil(healthPercentage)}%</span>`;
-    }
-
     checkMovingObstacleCollisions() {
         if (this.isInvulnerable) return;
 
@@ -2183,8 +2277,8 @@ export class Game {
     }
 
     handleCollision(collision) {
-        // Apply damage
-        this.health -= collision.damage;
+        // Apply damage and ensure health doesn't go below 0
+        this.health = Math.max(0, this.health - collision.damage);
         this.updateHealthDisplay();
 
         // Play appropriate sound
