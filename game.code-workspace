@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "game",
+			"path": "."
+		},
+		{
+			"name": "sounds",
+			"path": "../sounds"
+		}
+	],
+	"settings": {}
+}
