@@ -1034,4 +1034,9 @@ export class CarSelectionManager {
     getSelectedCar() {
         return this.selectedCar;
     }
+
+    getUnlockedCarsCount() {
+        const score = this.game ? this.game.score : 0;
+        return this.cars.filter(car => car.unlockRequirement <= score).length;
+    }
 } 

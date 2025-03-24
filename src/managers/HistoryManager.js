@@ -7,6 +7,11 @@ export class HistoryManager {
         this.gameHistory = [];
         this.maxHistoryEntries = 10;
         this.initialized = false;
+        this.badgeManager = null;
+    }
+
+    setBadgeManager(badgeManager) {
+        this.badgeManager = badgeManager;
     }
 
     init() {
@@ -135,14 +140,16 @@ export class HistoryManager {
         this.gameHistory.forEach((entry, index) => {
             const entryDiv = document.createElement('div');
             entryDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            entryDiv.style.padding = '10px';
-            entryDiv.style.borderRadius = '5px';
-            entryDiv.style.marginBottom = '5px';
+            entryDiv.style.padding = '15px';
+            entryDiv.style.borderRadius = '10px';
+            entryDiv.style.marginBottom = '15px';
             
             const date = new Date(entry.timestamp);
             const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
             
-            entryDiv.innerHTML = `
+            // Create main stats section
+            const statsSection = document.createElement('div');
+            statsSection.innerHTML = `
                 <div style="font-weight: bold; color: ${entry.isHighScore ? '#FFD700' : 'white'}">
                     ${index + 1}. Score: ${entry.score} ${entry.isHighScore ? '🏆' : ''}
                 </div>
@@ -151,7 +158,75 @@ export class HistoryManager {
                 <div>Level: ${entry.level}</div>
                 <div style="font-size: 0.8em; color: #888;">${formattedDate}</div>
             `;
-            
+            entryDiv.appendChild(statsSection);
+
+            // Add badges section if there are badges
+            if (entry.badges && entry.badges.length > 0) {
+                const badgesSection = document.createElement('div');
+                badgesSection.style.marginTop = '10px';
+                badgesSection.style.padding = '10px';
+                badgesSection.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                badgesSection.style.borderRadius = '5px';
+                
+                const badgeTitle = document.createElement('div');
+                badgeTitle.textContent = 'Badges Earned:';
+                badgeTitle.style.marginBottom = '5px';
+                badgeTitle.style.color = '#FFD700';
+                badgesSection.appendChild(badgeTitle);
+
+                const badgeGrid = document.createElement('div');
+                badgeGrid.style.display = 'flex';
+                badgeGrid.style.flexWrap = 'wrap';
+                badgeGrid.style.gap = '5px';
+
+                entry.badges.forEach(badgeId => {
+                    const badge = this.findBadgeDetails(badgeId);
+                    if (badge) {
+                        const badgeElement = document.createElement('div');
+                        badgeElement.title = badge.name;
+                        badgeElement.style.fontSize = '20px';
+                        badgeElement.style.cursor = 'pointer';
+                        badgeElement.textContent = badge.icon;
+                        badgeElement.addEventListener('mouseover', () => {
+                            this.showBadgeTooltip(badgeElement, badge);
+                        });
+                        badgeElement.addEventListener('mouseout', () => {
+                            this.hideBadgeTooltip();
+                        });
+                        badgeGrid.appendChild(badgeElement);
+                    }
+                });
+
+                badgesSection.appendChild(badgeGrid);
+                entryDiv.appendChild(badgesSection);
+            }
+
+            // Add share buttons
+            const shareSection = document.createElement('div');
+            shareSection.style.marginTop = '10px';
+            shareSection.style.display = 'flex';
+            shareSection.style.gap = '10px';
+            shareSection.style.justifyContent = 'flex-end';
+
+            // Twitter share button
+            const twitterButton = this.createShareButton('Twitter', '#1DA1F2', () => {
+                this.shareOnTwitter(entry);
+            });
+            shareSection.appendChild(twitterButton);
+
+            // Facebook share button
+            const facebookButton = this.createShareButton('Facebook', '#4267B2', () => {
+                this.shareOnFacebook(entry);
+            });
+            shareSection.appendChild(facebookButton);
+
+            // Copy link button
+            const copyButton = this.createShareButton('Copy', '#666666', () => {
+                this.copyShareLink(entry);
+            });
+            shareSection.appendChild(copyButton);
+
+            entryDiv.appendChild(shareSection);
             this.historyPanel.appendChild(entryDiv);
         });
 
@@ -161,6 +236,103 @@ export class HistoryManager {
             noHistoryDiv.style.color = '#888';
             noHistoryDiv.textContent = 'No game history yet';
             this.historyPanel.appendChild(noHistoryDiv);
+        }
+    }
+
+    createShareButton(platform, color, onClick) {
+        const button = document.createElement('button');
+        button.textContent = platform;
+        button.style.padding = '5px 10px';
+        button.style.backgroundColor = color;
+        button.style.color = 'white';
+        button.style.border = 'none';
+        button.style.borderRadius = '5px';
+        button.style.cursor = 'pointer';
+        button.style.fontSize = '12px';
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    shareOnTwitter(entry) {
+        const text = this.createShareText(entry);
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    }
+
+    shareOnFacebook(entry) {
+        const text = this.createShareText(entry);
+        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    }
+
+    copyShareLink(entry) {
+        const text = this.createShareText(entry);
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Share text copied to clipboard!');
+        });
+    }
+
+    createShareText(entry) {
+        let text = `🎮 Just scored ${entry.score} points in Road Runner!`;
+        text += `\n🛣️ Distance: ${entry.distance.toFixed(1)} km`;
+        text += `\n⏱️ Time: ${this.formatTime(entry.time)}`;
+        
+        if (entry.badges && entry.badges.length > 0) {
+            text += '\n🏆 Badges earned:';
+            entry.badges.forEach(badgeId => {
+                const badge = this.findBadgeDetails(badgeId);
+                if (badge) {
+                    text += ` ${badge.icon}`;
+                }
+            });
+        }
+        
+        if (entry.isHighScore) {
+            text += '\n🌟 New High Score!';
+        }
+        
+        text += '\n\nCan you beat my score? Play now!';
+        return text;
+    }
+
+    findBadgeDetails(badgeId) {
+        if (!this.badgeManager) return null;
+        
+        for (const category in this.badgeManager.badges) {
+            const badge = this.badgeManager.badges[category].find(b => b.id === badgeId);
+            if (badge) return badge;
+        }
+        return null;
+    }
+
+    showBadgeTooltip(element, badge) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'badge-tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '10px';
+        tooltip.style.borderRadius = '5px';
+        tooltip.style.fontSize = '14px';
+        tooltip.style.zIndex = '1002';
+        tooltip.style.maxWidth = '200px';
+        tooltip.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+        tooltip.innerHTML = `
+            <div style="font-weight: bold; color: #FFD700">${badge.name}</div>
+            <div style="margin-top: 5px">${badge.description}</div>
+        `;
+
+        const rect = element.getBoundingClientRect();
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.top = `${rect.bottom + 5}px`;
+
+        document.body.appendChild(tooltip);
+    }
+
+    hideBadgeTooltip() {
+        const tooltip = document.querySelector('.badge-tooltip');
+        if (tooltip) {
+            tooltip.remove();
         }
     }
 
@@ -185,7 +357,8 @@ export class HistoryManager {
             time,
             level,
             timestamp: Date.now(),
-            isHighScore: score > this.getHighScore()
+            isHighScore: score > this.getHighScore(),
+            badges: this.badgeManager ? Array.from(this.badgeManager.unlockedBadges) : []
         };
 
         this.gameHistory.unshift(entry);

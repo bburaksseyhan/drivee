@@ -10,6 +10,7 @@ import { GaugeManager } from './managers/GaugeManager.js';
 import { MovingObstacleManager } from './managers/MovingObstacleManager.js';
 import { HistoryManager } from './managers/HistoryManager.js';
 import { CarSelectionManager } from './managers/CarSelectionManager.js';
+import { BadgeManager } from './managers/BadgeManager.js';
 
 export class Game {
     constructor() {
@@ -142,6 +143,22 @@ export class Game {
         this.carSelectionManager = new CarSelectionManager();
         this.carSelectionManager.setGaugeManager(this.gaugeManager);
         this.carSelectionManager.setGame(this);
+
+        // Initialize badge and history managers
+        this.badgeManager = new BadgeManager();
+        this.historyManager = new HistoryManager();
+        this.historyManager.setBadgeManager(this.badgeManager);
+
+        // Track game statistics
+        this.gameStats = {
+            distance: 0,
+            speed: 0,
+            score: 0,
+            collisions: 0,
+            coins: 0,
+            season: 'spring',
+            unlockedCars: 0
+        };
     }
 
     createScoreDisplay() {
@@ -456,7 +473,8 @@ export class Game {
         
         this.levelManager = new LevelManager(this);
         this.vehicleManager = new VehicleManager(this.scene);
-        this.historyManager = new HistoryManager();
+        
+        // Initialize history manager
         this.historyManager.init();
         
         // Initialize other game elements
@@ -1284,6 +1302,7 @@ export class Game {
         }
 
         const delta = this.clock.getDelta();
+        const currentTime = Date.now() / 1000;
 
         // Update time tracking
         if (this.startTime !== null) {
@@ -1296,21 +1315,71 @@ export class Game {
             // Update speedometer with current speed
             const currentSpeed = this.scrollSpeed * 60; // Convert to m/s
             this.landscapeManager.updateSpeedometer(currentSpeed);
+
+            // Track time at max speed for Speed Survivor badge
+            if (currentSpeed >= this.maxSpeed * 0.95) { // 95% of max speed
+                if (!this.maxSpeedStartTime) {
+                    this.maxSpeedStartTime = currentTime;
+                } else if (currentTime - this.maxSpeedStartTime >= 300 && !this.unlockedBadges.has('speed_survivor')) {
+                    const badge = this.badges.special.find(b => b.id === 'speed_survivor');
+                    this.unlockBadge(badge);
+                }
+            } else {
+                this.maxSpeedStartTime = null;
+            }
+
+            // Track night driving for Night Rider badge
+            const phase = (this.clock.getElapsedTime() % 60) / 60;
+            if (phase >= 0.75 || phase < 0.25) { // Night time
+                if (!this.nightDrivingStartTime) {
+                    this.nightDrivingStartTime = currentTime;
+                    this.nightDrivingDistance = 0;
+                }
+                this.nightDrivingDistance += this.scrollSpeed * delta * 60;
+                
+                // Check for Night Rider badge
+                if (this.nightDrivingDistance >= 10000 && !this.unlockedBadges.has('night_rider')) {
+                    const badge = this.badges.special.find(b => b.id === 'night_rider');
+                    this.unlockBadge(badge);
+                }
+
+                // Check for Rush Hour Hero badge
+                if (this.score >= 1000 && !this.unlockedBadges.has('rush_hour')) {
+                    const badge = this.badges.challenges.find(b => b.id === 'rush_hour');
+                    this.unlockBadge(badge);
+                }
+            } else {
+                this.nightDrivingStartTime = null;
+            }
+
+            // Check for Marathon Runner badge
+            if (this.elapsedTime >= 1800 && !this.unlockedBadges.has('marathon_runner')) {
+                const badge = this.badges.challenges.find(b => b.id === 'marathon_runner');
+                this.unlockBadge(badge);
+            }
         } else {
             // If game is paused or not running, show speed as 0
             this.landscapeManager.updateSpeedometer(0);
         }
 
-        // Update bullets
+        // Update game statistics
+        this.gameStats = {
+            distance: this.distance / 1000, // Convert to kilometers
+            speed: this.scrollSpeed * 200, // Convert to km/h
+            score: this.score,
+            collisions: this.collisionCount,
+            coins: this.coinCount,
+            season: this.currentSeason,
+            unlockedCars: this.carSelectionManager.getUnlockedCarsCount()
+        };
+
+        // Check for badges
+        this.badgeManager.checkAndAwardBadges(this.gameStats);
+
+        // Continue with regular updates
         this.updateBullets(delta);
-
-        // Update score display
         this.updateScoreDisplay();
-
-        // Update day-night cycle
         this.updateDayNightCycle();
-
-        // Update game elements
         this.updateRoad(delta);
         this.updateTrees(delta);
         this.coinManager.updateCoins(delta, this.car, (points) => {
@@ -1365,6 +1434,15 @@ export class Game {
                 this.car.visible = Math.floor(now * 10) % 2 === 0;
             }
         }
+
+        // Update game statistics
+        this.gameStats.distance = this.distance / 1000; // Convert to kilometers
+        this.gameStats.speed = this.scrollSpeed * 200; // Convert to km/h
+        this.gameStats.score = this.score;
+        this.gameStats.season = this.currentSeason;
+
+        // Check for badges
+        this.badgeManager.checkAndAwardBadges(this.gameStats);
     }
     
     updateCarPosition(delta) {
@@ -1411,30 +1489,18 @@ export class Game {
 
     gameOver() {
         this.isGameOver = true;
-        this.gaugeManager.resetGauges();
-        this.gaugeManager.hideGauges();
-        this.hidePauseButton();
-        this.isGameRunning = false;
+        this.isPaused = false;
         
-        // Reset speedometer to 0
-        this.landscapeManager.resetSpeedometer();
-        
-        // If the game is paused, close the pause overlay
-        if (this.isPaused) {
-            this.pauseOverlay.style.display = 'none';
-        }
-        
-        // Save game stats
-        const distanceKm = this.distance / 1000;
+        // Save game stats with current badges
         this.historyManager.saveGameStats(
             this.score,
-            distanceKm,
+            this.distance / 1000, // Convert to kilometers
             this.elapsedTime,
-            this.levelManager.currentLevel
+            this.currentLevel
         );
-        
-        // Show car selection screen again
-        this.carSelectionManager.showCarSelection();
+
+        // Show game over screen
+        this.showGameOverScreen();
     }
 
     formatTime(seconds) {
@@ -2232,9 +2298,10 @@ export class Game {
                     this.obstacleManager.obstacles = this.obstacleManager.obstacles.filter(o => o !== obstacle);
                     this.obstacleManager.obstaclePool.push(obstacle);
                     
-                    // Add score
+                    // Add score and update combat stats
                     this.score += 20;
                     this.updateScoreDisplay();
+                    this.badgeManager.updateCombatStats();
                     hasCollided = true;
                     break;
                 }
@@ -2270,9 +2337,10 @@ export class Game {
                             this.movingObstacleManager.obstacles = this.movingObstacleManager.obstacles.filter(o => o !== obstacle);
                             this.movingObstacleManager.obstaclePool[obstacle.userData.type].push(obstacle);
                             
-                            // Add score (more points for moving obstacles)
+                            // Add score and update combat stats
                             this.score += 50;
                             this.updateScoreDisplay();
+                            this.badgeManager.updateCombatStats('tank');
                             hasCollided = true;
                             break;
                         }
@@ -2292,9 +2360,10 @@ export class Game {
                             this.movingObstacleManager.obstacles = this.movingObstacleManager.obstacles.filter(o => o !== obstacle);
                             this.movingObstacleManager.obstaclePool[obstacle.userData.type].push(obstacle);
                             
-                            // Add score (more points for moving obstacles)
+                            // Add score and update combat stats
                             this.score += 30;
                             this.updateScoreDisplay();
+                            this.badgeManager.updateCombatStats();
                             hasCollided = true;
                             break;
                         }
@@ -2347,22 +2416,20 @@ export class Game {
     }
 
     handleCollision(collision) {
-        // Apply damage and ensure health doesn't go below 0
+        if (this.isInvulnerable) return;
+        
+        // Update collision count
+        this.gameStats.collisions++;
+        
+        // Apply damage
         this.health = Math.max(0, this.health - collision.damage);
         this.updateHealthDisplay();
-
-        // Play appropriate sound
-        const sound = this[`${collision.type}Sound`];
-        if (sound) {
-            sound.currentTime = 0;
-            sound.play().catch(error => console.log("Audio play failed:", error));
-        }
-
-        // Visual feedback
+        
+        // Make invulnerable temporarily
         this.isInvulnerable = true;
         this.lastHitTime = Date.now() / 1000;
-
-        // Check if game over
+        
+        // Check for game over
         if (this.health <= 0) {
             this.gameOver();
         }
