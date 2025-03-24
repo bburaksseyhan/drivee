@@ -11,6 +11,8 @@ export class GaugeManager {
         this.lastUpdateTime = Date.now();
         this.createSpeedometer();
         this.createRPMGauge();
+        // Initially hide the gauges
+        this.hideGauges();
     }
 
     createSpeedometer() {
@@ -354,5 +356,23 @@ export class GaugeManager {
         this.currentRPM = 0;
         this.updateSpeedometer(0);
         this.updateRPMGauge(0);
+    }
+
+    hideGauges() {
+        if (this.speedometer) {
+            this.speedometer.style.display = 'none';
+        }
+        if (this.rpmGauge) {
+            this.rpmGauge.style.display = 'none';
+        }
+    }
+
+    showGauges() {
+        if (this.speedometer) {
+            this.speedometer.style.display = 'block';
+        }
+        if (this.rpmGauge) {
+            this.rpmGauge.style.display = 'block';
+        }
     }
 } 

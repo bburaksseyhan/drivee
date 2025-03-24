@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GaugeManager } from './GaugeManager.js';
 
 export class CarSelectionManager {
     constructor() {
@@ -100,6 +101,8 @@ export class CarSelectionManager {
         this.previewRenderers = [];
         this.previewScenes = [];
         this.previewCameras = [];
+        this.gaugeManager = null;
+        this.game = null;
         this.createCarSelectionUI();
     }
 
@@ -900,36 +903,49 @@ export class CarSelectionManager {
         // Specs bars
         Object.entries(car.specs).forEach(([spec, value]) => {
             const specContainer = document.createElement('div');
-            specContainer.style.marginBottom = '10px';
+            specContainer.style.marginBottom = '15px';
+
+            const specHeader = document.createElement('div');
+            specHeader.style.display = 'flex';
+            specHeader.style.justifyContent = 'space-between';
+            specHeader.style.marginBottom = '6px';
 
             const specName = document.createElement('div');
             specName.textContent = spec.charAt(0).toUpperCase() + spec.slice(1);
-            specName.style.marginBottom = '5px';
-            specContainer.appendChild(specName);
+            specName.style.color = '#fff';
+            specName.style.fontSize = '14px';
+            specHeader.appendChild(specName);
 
-            const specBar = document.createElement('div');
-            specBar.style.height = '4px';
-            specBar.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            specBar.style.borderRadius = '2px';
-            
-            const specValue = document.createElement('div');
-            // Normalize MaxSpeed to percentage
-            const normalizedValue = spec === 'maxSpeed' ? (value / 350 * 100) : value;
-            specValue.style.width = `${Math.min(100, normalizedValue)}%`;
-            specValue.style.height = '100%';
-            specValue.style.backgroundColor = '#FFD700';
-            specValue.style.borderRadius = '2px';
-            specBar.appendChild(specValue);
-            
-            // Add value label
             const valueLabel = document.createElement('div');
             valueLabel.textContent = spec === 'maxSpeed' ? `${value} km/h` : `${value}%`;
-            valueLabel.style.fontSize = '12px';
-            valueLabel.style.color = '#aaa';
-            valueLabel.style.marginTop = '2px';
-            specContainer.appendChild(specName);
-            specContainer.appendChild(specBar);
-            specContainer.appendChild(valueLabel);
+            valueLabel.style.fontSize = '14px';
+            valueLabel.style.color = '#FFD700';
+            specHeader.appendChild(valueLabel);
+
+            specContainer.appendChild(specHeader);
+
+            const specBarContainer = document.createElement('div');
+            specBarContainer.style.width = '100%';
+            specBarContainer.style.height = '6px';
+            specBarContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            specBarContainer.style.borderRadius = '3px';
+            specBarContainer.style.overflow = 'hidden';
+            specBarContainer.style.position = 'relative';
+
+            const specBar = document.createElement('div');
+            // Normalize MaxSpeed to percentage
+            const normalizedValue = spec === 'maxSpeed' ? (value / 350 * 100) : value;
+            specBar.style.width = `${Math.min(100, normalizedValue)}%`;
+            specBar.style.height = '100%';
+            specBar.style.backgroundColor = '#FFD700';
+            specBar.style.borderRadius = '3px';
+            specBar.style.transition = 'width 0.3s ease-in-out';
+            specBar.style.position = 'absolute';
+            specBar.style.left = '0';
+            specBar.style.top = '0';
+
+            specBarContainer.appendChild(specBar);
+            specContainer.appendChild(specBarContainer);
             
             card.appendChild(specContainer);
         });
@@ -984,10 +1000,24 @@ export class CarSelectionManager {
 
     showCarSelection() {
         this.carSelectionDiv.style.display = 'block';
+        if (this.gaugeManager) {
+            this.gaugeManager.hideGauges();
+        }
+        if (this.game) {
+            this.game.hidePauseButton();
+        }
     }
 
     hideCarSelection() {
         this.carSelectionDiv.style.display = 'none';
+    }
+
+    setGaugeManager(gaugeManager) {
+        this.gaugeManager = gaugeManager;
+    }
+
+    setGame(game) {
+        this.game = game;
     }
 
     startGame() {

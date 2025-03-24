@@ -140,6 +140,8 @@ export class Game {
 
         // Add car selection manager
         this.carSelectionManager = new CarSelectionManager();
+        this.carSelectionManager.setGaugeManager(this.gaugeManager);
+        this.carSelectionManager.setGame(this);
     }
 
     createScoreDisplay() {
@@ -278,36 +280,41 @@ export class Game {
     }
 
     createPauseButton() {
-        this.pauseButton = document.createElement('div');
+        this.pauseButton = document.createElement('button');
+        this.pauseButton.innerHTML = '❚❚';
         this.pauseButton.style.position = 'absolute';
         this.pauseButton.style.top = '20px';
         this.pauseButton.style.left = '20px';
-        this.pauseButton.style.width = '50px';
-        this.pauseButton.style.height = '50px';
-        this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        this.pauseButton.style.color = 'white';
-        this.pauseButton.style.borderRadius = '50%';
-        this.pauseButton.style.display = 'flex';
-        this.pauseButton.style.justifyContent = 'center';
-        this.pauseButton.style.alignItems = 'center';
+        this.pauseButton.style.padding = '10px 20px';
         this.pauseButton.style.fontSize = '24px';
+        this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.pauseButton.style.color = 'white';
+        this.pauseButton.style.border = 'none';
+        this.pauseButton.style.borderRadius = '5px';
         this.pauseButton.style.cursor = 'pointer';
-        this.pauseButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
         this.pauseButton.style.zIndex = '1000';
-        this.pauseButton.innerHTML = '❚❚';
         this.pauseButton.title = 'Pause Game';
+        this.pauseButton.style.display = 'none'; // Initially hidden
         
-        // Add click event
-        this.pauseButton.addEventListener('click', () => {
-            this.togglePause();
-        });
-        
+        this.pauseButton.onclick = () => this.togglePause();
         document.body.appendChild(this.pauseButton);
         
-        // Create pause overlay (hidden initially)
+        // Create pause overlay
         this.createPauseOverlay();
     }
-    
+
+    showPauseButton() {
+        if (this.pauseButton) {
+            this.pauseButton.style.display = 'block';
+        }
+    }
+
+    hidePauseButton() {
+        if (this.pauseButton) {
+            this.pauseButton.style.display = 'none';
+        }
+    }
+
     createPauseOverlay() {
         this.pauseOverlay = document.createElement('div');
         this.pauseOverlay.style.position = 'absolute';
@@ -474,6 +481,10 @@ export class Game {
 
         // Apply car specs to game settings
         this.updateGameSettingsFromCar(selectedCar);
+
+        // Show UI elements after initialization
+        this.gaugeManager.showGauges();
+        this.showPauseButton();
     }
 
     createCarWithSpecs(carSpecs) {
@@ -547,15 +558,14 @@ export class Game {
     }
     
     startCountdown() {
-        // Create countdown display
+        // Create countdown overlay
         this.countdownDiv = document.createElement('div');
         this.countdownDiv.style.position = 'absolute';
         this.countdownDiv.style.top = '50%';
         this.countdownDiv.style.left = '50%';
         this.countdownDiv.style.transform = 'translate(-50%, -50%)';
-        this.countdownDiv.style.color = 'white';
         this.countdownDiv.style.fontSize = '72px';
-        this.countdownDiv.style.fontFamily = 'Arial, sans-serif';
+        this.countdownDiv.style.color = 'white';
         this.countdownDiv.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
         this.countdownDiv.style.zIndex = '1000';
         document.body.appendChild(this.countdownDiv);
@@ -1402,6 +1412,8 @@ export class Game {
     gameOver() {
         this.isGameOver = true;
         this.gaugeManager.resetGauges();
+        this.gaugeManager.hideGauges();
+        this.hidePauseButton();
         this.isGameRunning = false;
         
         // Reset speedometer to 0
@@ -1410,7 +1422,6 @@ export class Game {
         // If the game is paused, close the pause overlay
         if (this.isPaused) {
             this.pauseOverlay.style.display = 'none';
-            this.pauseButton.style.display = 'none';
         }
         
         // Save game stats
@@ -1422,36 +1433,8 @@ export class Game {
             this.levelManager.currentLevel
         );
         
-        // Display game over message with stats
-        const gameOverDiv = document.createElement('div');
-        gameOverDiv.style.position = 'absolute';
-        gameOverDiv.style.top = '50%';
-        gameOverDiv.style.left = '50%';
-        gameOverDiv.style.transform = 'translate(-50%, -50%)';
-        gameOverDiv.style.color = 'white';
-        gameOverDiv.style.fontSize = '48px';
-        gameOverDiv.style.fontFamily = 'Arial, sans-serif';
-        gameOverDiv.style.textAlign = 'center';
-        gameOverDiv.style.padding = '20px';
-        gameOverDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        gameOverDiv.style.borderRadius = '10px';
-        gameOverDiv.innerHTML = `Game Over!<br>
-            <div style="font-size: 24px; margin: 20px 0;">
-                Final Health: ${Math.max(0, Math.ceil(this.health))}%<br>
-                Score: ${this.score}<br>
-                Distance: ${distanceKm.toFixed(1)} km<br>
-                Time: ${this.formatTime(this.elapsedTime)}<br>
-                Level: ${this.levelManager.currentLevel}
-            </div>
-            <button onclick="location.reload()" style="font-size: 24px; padding: 10px 20px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 5px;">
-                Play Again
-            </button>`;
-        document.body.appendChild(gameOverDiv);
-
-        // Reset moving obstacles
-        if (this.movingObstacleManager) {
-            this.movingObstacleManager.reset();
-        }
+        // Show car selection screen again
+        this.carSelectionManager.showCarSelection();
     }
 
     formatTime(seconds) {
