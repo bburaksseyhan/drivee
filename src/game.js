@@ -9,6 +9,7 @@ import { LandscapeManager } from './managers/LandscapeManager.js';
 import { GaugeManager } from './managers/GaugeManager.js';
 import { MovingObstacleManager } from './managers/MovingObstacleManager.js';
 import { HistoryManager } from './managers/HistoryManager.js';
+import { CarSelectionManager } from './managers/CarSelectionManager.js';
 
 export class Game {
     constructor() {
@@ -21,6 +22,11 @@ export class Game {
         this.clock = new THREE.Clock();
         this.isGameRunning = false;
         this.score = 0;
+        
+        // Add UFO-related properties
+        this.ufos = [];
+        this.lastUfoSpawn = 0;
+        this.ufoSpawnInterval = 10; // Spawn UFO every 10 seconds
         
         // Audio setup
         this.coinSound = new Audio('sounds/coin.mp3');
@@ -131,6 +137,9 @@ export class Game {
 
         // Create health display
         this.createHealthDisplay();
+
+        // Add car selection manager
+        this.carSelectionManager = new CarSelectionManager();
     }
 
     createScoreDisplay() {
@@ -363,10 +372,10 @@ export class Game {
     init() {
         // Create scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB); // Initial day color
+        this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 20, 200);
         
-        // Create camera with wider field of view
+        // Create camera
         this.camera = new THREE.PerspectiveCamera(
             85,
             window.innerWidth / window.innerHeight,
@@ -384,14 +393,27 @@ export class Game {
         document.body.appendChild(this.renderer.domElement);
         
         // Add lights
+        this.setupLights();
+        
+        // Show car selection before initializing the game
+        this.carSelectionManager.showCarSelection();
+
+        // Listen for car selection
+        document.addEventListener('carSelected', (event) => {
+            const selectedCar = event.detail;
+            // Initialize the game with selected car
+            this.initializeGameWithCar(selectedCar);
+        });
+    }
+
+    setupLights() {
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(this.ambientLight);
         
-        // Add hemisphere light for better outdoor lighting
         this.hemisphereLight = new THREE.HemisphereLight(
-            0x87CEEB,  // Sky color (light blue)
-            0x4CAF50,  // Ground color (green)
-            1.0        // Intensity
+            0x87CEEB,
+            0x4CAF50,
+            1.0
         );
         this.hemisphereLight.position.set(0, 50, 0);
         this.scene.add(this.hemisphereLight);
@@ -400,12 +422,15 @@ export class Game {
         this.directionalLight.position.set(10, 20, 10);
         this.directionalLight.castShadow = true;
         this.scene.add(this.directionalLight);
-        
+    }
+
+    initializeGameWithCar(selectedCar) {
         // Initialize managers in correct order
         this.landscapeManager = new LandscapeManager(this.scene, this.roadWidth);
         this.createRoad();
-        this.createCar();
+        this.createCarWithSpecs(selectedCar);
         this.initializeTrees();
+        
         this.coinManager = new CoinManager(
             this.scene, 
             this.roadWidth, 
@@ -413,6 +438,7 @@ export class Game {
             20, 
             this.scrollSpeed
         );
+        
         this.obstacleManager = new ObstacleManager(
             this.scene, 
             this.roadWidth, 
@@ -420,43 +446,104 @@ export class Game {
             10, 
             this.scrollSpeed
         );
+        
         this.levelManager = new LevelManager(this);
         this.vehicleManager = new VehicleManager(this.scene);
-        
-        // Initialize history manager
         this.historyManager = new HistoryManager();
         this.historyManager.init();
         
-        // Initialize UFOs
-        this.ufos = [];
-        this.lastUfoSpawn = 0;
-        this.ufoSpawnInterval = 30; // Spawn a UFO every 30 seconds
-        
-        // Setup event listeners
+        // Initialize other game elements
         this.setupEventListeners();
-        
-        // Handle window resize
         window.addEventListener('resize', this.onWindowResize.bind(this));
         
-        // Create the countdown instead of immediately starting the game
+        // Start countdown
         this.isGameRunning = false;
         this.startCountdown();
 
+        // Initialize remaining managers
         this.roadManager = new RoadManager(this.scene, this.roadWidth, this.roadLength, this.scrollSpeed);
-
-        // Initialize airports
         this.createAirports();
-
-        // Initialize vehicles
         this.vehicleManager.createVehicle();
-
-        // Initialize moving obstacle manager after scene setup
+        
         this.movingObstacleManager = new MovingObstacleManager(
             this.scene,
             this.roadWidth,
             this.roadLength,
             this.scrollSpeed
         );
+
+        // Apply car specs to game settings
+        this.updateGameSettingsFromCar(selectedCar);
+    }
+
+    createCarWithSpecs(carSpecs) {
+        this.car = new THREE.Group();
+        
+        // Create car body with selected color
+        const bodyGeometry = new THREE.BoxGeometry(1.5, 0.5, 3);
+        const bodyMaterial = new THREE.MeshStandardMaterial({ 
+            color: carSpecs.color,
+            metalness: 0.7,
+            roughness: 0.3
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.5;
+        body.castShadow = true;
+        this.car.add(body);
+        
+        // Car top
+        const topGeometry = new THREE.BoxGeometry(1.2, 0.4, 1.5);
+        const topMaterial = new THREE.MeshStandardMaterial({ 
+            color: carSpecs.color,
+            metalness: 0.7,
+            roughness: 0.3
+        });
+        const top = new THREE.Mesh(topGeometry, topMaterial);
+        top.position.y = 0.95;
+        top.position.z = -0.2;
+        top.castShadow = true;
+        this.car.add(top);
+        
+        // Wheels
+        const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+        const wheelMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x111111,
+            metalness: 0.5,
+            roughness: 0.7
+        });
+        
+        // Add wheels
+        const wheelPositions = [
+            [-0.8, 0.4, 1],   // Front left
+            [0.8, 0.4, 1],    // Front right
+            [-0.8, 0.4, -1],  // Rear left
+            [0.8, 0.4, -1]    // Rear right
+        ];
+        
+        wheelPositions.forEach(position => {
+            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(...position);
+            wheel.castShadow = true;
+            this.car.add(wheel);
+        });
+        
+        // Position the car
+        this.car.position.set(this.carPosition.x, this.carPosition.y, this.carPosition.z);
+        this.scene.add(this.car);
+    }
+
+    updateGameSettingsFromCar(carSpecs) {
+        // Update game settings based on car specifications
+        this.carSpeed = 0.14 * (carSpecs.specs.handling / 100);
+        this.scrollSpeed = 0.35 * (carSpecs.specs.maxSpeed / 350);
+        this.bulletSpeed = 2.0 * (carSpecs.specs.acceleration / 100);
+        
+        // Update manager speeds
+        if (this.coinManager) this.coinManager.scrollSpeed = this.scrollSpeed;
+        if (this.obstacleManager) this.obstacleManager.scrollSpeed = this.scrollSpeed;
+        if (this.roadManager) this.roadManager.scrollSpeed = this.scrollSpeed;
+        if (this.movingObstacleManager) this.movingObstacleManager.scrollSpeed = this.scrollSpeed;
     }
     
     startCountdown() {
