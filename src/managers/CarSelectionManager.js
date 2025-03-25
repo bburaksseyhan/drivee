@@ -93,6 +93,37 @@ export class CarSelectionManager {
                 color: '#FFD700',
                 description: 'Ultimate performance machine for the most demanding drivers.',
                 unlockRequirement: 10000
+            },
+            // Additional vehicles
+            {
+                id: 'compact',
+                name: 'Compact Car',
+                model: 'Eco Mini',
+                price: 20000,
+                specs: {
+                    maxSpeed: 180,
+                    acceleration: 60,
+                    handling: 80,
+                    braking: 75
+                },
+                color: '#00FF00',
+                description: 'Efficient and easy to park, perfect for city driving.',
+                unlockRequirement: 0
+            },
+            {
+                id: 'convertible',
+                name: 'Convertible',
+                model: 'Sunshine Cruiser',
+                price: 90000,
+                specs: {
+                    maxSpeed: 240,
+                    acceleration: 85,
+                    handling: 80,
+                    braking: 85
+                },
+                color: '#FFA500',
+                description: 'Enjoy the open air with this stylish convertible.',
+                unlockRequirement: 6000
             }
         ];
 
@@ -528,6 +559,94 @@ export class CarSelectionManager {
 
                 carGroup.add(superBody);
                 break;
+
+            case 'compact':
+                // Compact car - small and efficient
+                const compactBody = new THREE.Group();
+                
+                // Main body
+                const compactMain = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.8, 0.6, 3.5),
+                    new THREE.MeshStandardMaterial({ 
+                        color: car.color,
+                        metalness: 0.5,
+                        roughness: 0.4
+                    })
+                );
+                compactMain.position.y = 0.5;
+                compactBody.add(compactMain);
+
+                // Roof
+                const compactRoof = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.6, 0.3, 2),
+                    new THREE.MeshStandardMaterial({ 
+                        color: car.color,
+                        metalness: 0.5,
+                        roughness: 0.4
+                    })
+                );
+                compactRoof.position.set(0, 0.9, -0.5);
+                compactBody.add(compactRoof);
+
+                // Front grille
+                const compactGrille = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.6, 0.2, 0.1),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x333333,
+                        metalness: 0.8,
+                        roughness: 0.2
+                    })
+                );
+                compactGrille.position.set(0, 0.4, 1.75);
+                compactBody.add(compactGrille);
+
+                carGroup.add(compactBody);
+                break;
+
+            case 'convertible':
+                // Convertible - open-top and stylish
+                const convertibleBody = new THREE.Group();
+                
+                // Main body
+                const convertibleMain = new THREE.Mesh(
+                    new THREE.BoxGeometry(2, 0.5, 4),
+                    new THREE.MeshStandardMaterial({ 
+                        color: car.color,
+                        metalness: 0.6,
+                        roughness: 0.3
+                    })
+                );
+                convertibleMain.position.y = 0.5;
+                convertibleBody.add(convertibleMain);
+
+                // Open-top design
+                const convertibleInterior = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.8, 0.2, 3.5),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x222222,
+                        metalness: 0.5,
+                        roughness: 0.5
+                    })
+                );
+                convertibleInterior.position.set(0, 0.7, 0);
+                convertibleBody.add(convertibleInterior);
+
+                // Windshield
+                const convertibleWindshield = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.6, 0.4, 0.1),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x111111,
+                        metalness: 0.9,
+                        roughness: 0.1,
+                        opacity: 0.7,
+                        transparent: true
+                    })
+                );
+                convertibleWindshield.position.set(0, 0.9, 1.8);
+                convertibleBody.add(convertibleWindshield);
+
+                carGroup.add(convertibleBody);
+                break;
         }
 
         // Add wheels to all cars
@@ -804,13 +923,13 @@ export class CarSelectionManager {
         this.carSelectionDiv.style.left = '50%';
         this.carSelectionDiv.style.transform = 'translate(-50%, -50%)';
         this.carSelectionDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-        this.carSelectionDiv.style.padding = '30px';
-        this.carSelectionDiv.style.borderRadius = '15px';
+        this.carSelectionDiv.style.padding = '10px';
+        this.carSelectionDiv.style.borderRadius = '8px';
         this.carSelectionDiv.style.color = 'white';
         this.carSelectionDiv.style.fontFamily = 'Arial, sans-serif';
         this.carSelectionDiv.style.width = '90%';
-        this.carSelectionDiv.style.maxWidth = '1200px';
-        this.carSelectionDiv.style.maxHeight = '90vh';
+        this.carSelectionDiv.style.maxWidth = '800px';
+        this.carSelectionDiv.style.maxHeight = '75vh';
         this.carSelectionDiv.style.overflowY = 'auto';
         this.carSelectionDiv.style.backdropFilter = 'blur(10px)';
         this.carSelectionDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
@@ -821,14 +940,14 @@ export class CarSelectionManager {
         const title = document.createElement('h1');
         title.textContent = 'Select Your Car';
         title.style.textAlign = 'center';
-        title.style.marginBottom = '30px';
+        title.style.marginBottom = '10px';
         title.style.background = 'linear-gradient(45deg, #FFD700, #FFA500)';
         title.style.WebkitBackgroundClip = 'text';
         title.style.WebkitTextFillColor = 'transparent';
         title.style.backgroundClip = 'text';
-        title.style.textShadow = '0 2px 4px rgba(255, 215, 0, 0.2)';
-        title.style.fontSize = 'clamp(24px, 5vw, 36px)';
-        title.style.fontWeight = '600';
+        title.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
+        title.style.fontSize = 'clamp(18px, 3vw, 28px)';
+        title.style.fontWeight = 'bold';
         title.style.letterSpacing = '1px';
         title.style.textTransform = 'uppercase';
         title.style.fontFamily = "'Segoe UI', Arial, sans-serif";
@@ -837,9 +956,9 @@ export class CarSelectionManager {
         // Create car grid
         const carGrid = document.createElement('div');
         carGrid.style.display = 'grid';
-        carGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
-        carGrid.style.gap = '20px';
-        carGrid.style.marginBottom = '30px';
+        carGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(180px, 1fr))';
+        carGrid.style.gap = '8px';
+        carGrid.style.marginBottom = '10px';
         carGrid.style.width = '100%';
 
         this.cars.forEach(car => {
@@ -853,15 +972,17 @@ export class CarSelectionManager {
         const startButton = document.createElement('button');
         startButton.textContent = 'Start Game';
         startButton.style.display = 'block';
-        startButton.style.margin = '20px auto';
-        startButton.style.padding = 'clamp(10px, 2vw, 15px) clamp(20px, 4vw, 40px)';
-        startButton.style.fontSize = 'clamp(16px, 3vw, 18px)';
+        startButton.style.margin = '8px auto';
+        startButton.style.padding = 'clamp(5px, 0.8vw, 8px) clamp(10px, 2vw, 20px)';
+        startButton.style.fontSize = 'clamp(12px, 2vw, 16px)';
+        startButton.style.fontWeight = 'bold';
         startButton.style.backgroundColor = '#4CAF50';
         startButton.style.color = 'white';
         startButton.style.border = 'none';
-        startButton.style.borderRadius = '25px';
+        startButton.style.borderRadius = '12px';
         startButton.style.cursor = 'pointer';
         startButton.style.transition = 'background-color 0.3s';
+        startButton.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
         startButton.onclick = () => this.startGame();
         startButton.onmouseover = () => startButton.style.backgroundColor = '#45a049';
         startButton.onmouseout = () => startButton.style.backgroundColor = '#4CAF50';
@@ -873,22 +994,22 @@ export class CarSelectionManager {
     createCarCard(car) {
         const card = document.createElement('div');
         card.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-        card.style.borderRadius = '10px';
-        card.style.padding = 'clamp(15px, 3vw, 20px)';
+        card.style.borderRadius = '5px';
+        card.style.padding = 'clamp(6px, 1.5vw, 10px)';
         card.style.cursor = 'pointer';
         card.style.transition = 'transform 0.3s, background-color 0.3s';
         card.style.border = '2px solid transparent';
         card.style.width = '100%';
-        card.style.maxWidth = '400px';
+        card.style.maxWidth = '280px';
         card.style.margin = '0 auto';
 
         // Create and add 3D car preview
         const previewContainer = document.createElement('div');
         previewContainer.style.width = '100%';
         previewContainer.style.aspectRatio = '3/2';
-        previewContainer.style.marginBottom = '15px';
+        previewContainer.style.marginBottom = '6px';
         previewContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-        previewContainer.style.borderRadius = '5px';
+        previewContainer.style.borderRadius = '4px';
         previewContainer.style.overflow = 'hidden';
         
         const preview = this.createCarPreview(car);
@@ -900,44 +1021,49 @@ export class CarSelectionManager {
         // Car info
         const name = document.createElement('h2');
         name.textContent = car.name;
-        name.style.marginBottom = '10px';
-        name.style.fontSize = 'clamp(18px, 3vw, 24px)';
+        name.style.marginBottom = '5px';
+        name.style.fontSize = 'clamp(14px, 2vw, 20px)';
+        name.style.fontWeight = 'bold';
+        name.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
         card.appendChild(name);
 
         const model = document.createElement('p');
         model.textContent = car.model;
         model.style.color = '#aaa';
-        model.style.marginBottom = '15px';
-        model.style.fontSize = 'clamp(14px, 2vw, 16px)';
+        model.style.marginBottom = '6px';
+        model.style.fontSize = 'clamp(10px, 1.5vw, 14px)';
+        model.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
         card.appendChild(model);
 
         // Specs bars
         Object.entries(car.specs).forEach(([spec, value]) => {
             const specContainer = document.createElement('div');
-            specContainer.style.marginBottom = '15px';
+            specContainer.style.marginBottom = '6px';
 
             const specHeader = document.createElement('div');
             specHeader.style.display = 'flex';
             specHeader.style.justifyContent = 'space-between';
-            specHeader.style.marginBottom = '6px';
+            specHeader.style.marginBottom = '2px';
 
             const specName = document.createElement('div');
             specName.textContent = spec.charAt(0).toUpperCase() + spec.slice(1);
             specName.style.color = '#fff';
-            specName.style.fontSize = 'clamp(12px, 2vw, 14px)';
+            specName.style.fontSize = 'clamp(8px, 1.2vw, 12px)';
+            specName.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
             specHeader.appendChild(specName);
 
             const valueLabel = document.createElement('div');
             valueLabel.textContent = spec === 'maxSpeed' ? `${value} km/h` : `${value}%`;
-            valueLabel.style.fontSize = 'clamp(12px, 2vw, 14px)';
+            valueLabel.style.fontSize = 'clamp(8px, 1.2vw, 12px)';
             valueLabel.style.color = '#FFD700';
+            valueLabel.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
             specHeader.appendChild(valueLabel);
 
             specContainer.appendChild(specHeader);
 
             const specBarContainer = document.createElement('div');
             specBarContainer.style.width = '100%';
-            specBarContainer.style.height = '6px';
+            specBarContainer.style.height = '4px';
             specBarContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
             specBarContainer.style.borderRadius = '3px';
             specBarContainer.style.overflow = 'hidden';
@@ -965,8 +1091,10 @@ export class CarSelectionManager {
         const price = document.createElement('div');
         price.textContent = `$${car.price.toLocaleString()}`;
         price.style.color = '#4CAF50';
-        price.style.fontSize = 'clamp(16px, 3vw, 20px)';
-        price.style.marginTop = '15px';
+        price.style.fontSize = 'clamp(12px, 2vw, 16px)';
+        price.style.fontWeight = 'bold';
+        price.style.marginTop = '6px';
+        price.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
         card.appendChild(price);
 
         // Lock status
@@ -974,8 +1102,9 @@ export class CarSelectionManager {
             const lock = document.createElement('div');
             lock.textContent = `🔒 Unlock at ${car.unlockRequirement.toLocaleString()} points`;
             lock.style.color = '#ff4444';
-            lock.style.marginTop = '10px';
-            lock.style.fontSize = 'clamp(12px, 2vw, 14px)';
+            lock.style.marginTop = '4px';
+            lock.style.fontSize = 'clamp(8px, 1.2vw, 12px)';
+            lock.style.textShadow = '1px 1px 2px rgba(0, 0, 0, 0.5)';
             card.appendChild(lock);
         }
 
@@ -997,6 +1126,7 @@ export class CarSelectionManager {
                 card.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
             }
         };
+
         card.onmouseout = () => {
             card.style.transform = 'scale(1)';
             card.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';

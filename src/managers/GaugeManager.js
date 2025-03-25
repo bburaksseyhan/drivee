@@ -375,4 +375,38 @@ export class GaugeManager {
             this.rpmGauge.style.display = 'block';
         }
     }
+
+    updateGaugeSize(size) {
+        const dimensions = size === 'small' ? '100px' : '150px';
+        const fontSize = size === 'small' ? '18px' : '24px';
+        const needleHeight = size === 'small' ? '40px' : '60px';
+
+        // Update speedometer size
+        if (this.speedometer) {
+            this.speedometer.style.width = dimensions;
+            this.speedometer.style.height = dimensions;
+            const speedDisplay = this.speedometer.querySelector('div');
+            if (speedDisplay) {
+                speedDisplay.style.fontSize = fontSize;
+            }
+            const needle = this.speedometer.querySelector('div:nth-child(3)');
+            if (needle) {
+                needle.style.height = needleHeight;
+            }
+        }
+
+        // Update RPM gauge size
+        if (this.rpmGauge) {
+            this.rpmGauge.style.width = dimensions;
+            this.rpmGauge.style.height = dimensions;
+            const rpmDisplay = this.rpmGauge.querySelector('div');
+            if (rpmDisplay) {
+                rpmDisplay.style.fontSize = fontSize;
+            }
+            const needle = this.rpmGauge.querySelector('div:nth-child(3)');
+            if (needle) {
+                needle.style.height = needleHeight;
+            }
+        }
+    }
 } 

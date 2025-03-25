@@ -336,7 +336,7 @@ export class Game {
         this.pauseButton.innerHTML = '❚❚';
         this.pauseButton.style.position = 'fixed';
         this.pauseButton.style.top = '130px';
-        this.pauseButton.style.left = '20px';
+        this.pauseButton.style.right = '80px'; // Position next to history button
         this.pauseButton.style.width = 'clamp(35px, 8vw, 45px)';
         this.pauseButton.style.height = 'clamp(35px, 8vw, 45px)';
         this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
@@ -1331,73 +1331,133 @@ export class Game {
     
     onWindowResize() {
         // Update camera aspect ratio
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
+        if (this.camera) {
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+        }
 
         // Update renderer size
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        // Update UI elements for mobile
-        if (this.isMobile) {
-            this.updateMobileUI();
+        if (this.renderer) {
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         }
+
+        // Update UI elements for mobile responsiveness
+        this.updateUIForScreenSize();
     }
 
-    updateMobileUI() {
-        // Update dashboard position and size based on device type
-        if (this.dashboardDiv) {
-            const isTablet = this.deviceType === 'tablet';
-            this.dashboardDiv.style.width = isTablet ? '80%' : '90%';
-            this.dashboardDiv.style.maxWidth = isTablet ? '600px' : '400px';
-            this.dashboardDiv.style.fontSize = isTablet ? 'clamp(14px, 3vw, 18px)' : 'clamp(12px, 3vw, 16px)';
+    updateUIForScreenSize() {
+        const isMobile = window.innerWidth <= 768;
+        const isSmallMobile = window.innerWidth <= 480;
+
+        // Update score display
+        if (this.scoreDisplay) {
+            this.scoreDisplay.style.fontSize = isMobile ? '12px' : '16px';
+            this.scoreDisplay.style.padding = isMobile ? '6px 10px' : '10px 15px';
+        }
+
+        // Update health display
+        if (this.healthDisplay) {
+            this.healthDisplay.style.fontSize = isMobile ? '12px' : '16px';
+            this.healthDisplay.style.padding = isMobile ? '6px 10px' : '10px 15px';
         }
 
         // Update season display
-        if (this.seasonDiv) {
-            const isTablet = this.deviceType === 'tablet';
-            this.seasonDiv.style.fontSize = isTablet ? 'clamp(16px, 4vw, 24px)' : 'clamp(14px, 4vw, 18px)';
-            this.seasonDiv.style.padding = isTablet ? 'clamp(8px, 2vw, 15px) clamp(15px, 3vw, 30px)' : 'clamp(5px, 2vw, 10px) clamp(10px, 3vw, 20px)';
+        if (this.seasonDisplay) {
+            this.seasonDisplay.style.fontSize = isMobile ? '12px' : '16px';
+            this.seasonDisplay.style.padding = isMobile ? '6px 10px' : '10px 15px';
         }
 
-        // Update stats panels
-        if (this.currentStatsDiv && this.bestStatsDiv) {
-            const statsStyle = {
-                fontSize: 'clamp(12px, 3vw, 16px)',
-                padding: 'clamp(10px, 2vw, 15px)',
-                minWidth: 'clamp(150px, 40vw, 200px)'
-            };
-            Object.assign(this.currentStatsDiv.style, statsStyle);
-            Object.assign(this.bestStatsDiv.style, statsStyle);
+        // Update countdown display
+        if (this.countdownDisplay) {
+            this.countdownDisplay.style.fontSize = isMobile ? '20px' : '32px';
+            this.countdownDisplay.style.padding = isMobile ? '10px 20px' : '20px 30px';
+        }
+
+        // Update badge button
+        if (this.badgeButton) {
+            this.badgeButton.style.fontSize = isMobile ? '12px' : '16px';
+            this.badgeButton.style.padding = isMobile ? '6px 10px' : '10px 15px';
+            this.badgeButton.style.right = isMobile ? '5px' : '20px';
+        }
+
+        // Update history button
+        if (this.historyButton) {
+            this.historyButton.style.fontSize = isMobile ? '12px' : '16px';
+            this.historyButton.style.padding = isMobile ? '6px 10px' : '10px 15px';
+            this.historyButton.style.right = isMobile ? '5px' : '20px';
         }
 
         // Update pause button
         if (this.pauseButton) {
-            this.pauseButton.style.width = 'clamp(35px, 8vw, 45px)';
-            this.pauseButton.style.height = 'clamp(35px, 8vw, 45px)';
-            this.pauseButton.style.fontSize = 'clamp(18px, 4vw, 22px)';
+            this.pauseButton.style.fontSize = isMobile ? '12px' : '16px';
+            this.pauseButton.style.padding = isMobile ? '6px 10px' : '10px 15px';
+            this.pauseButton.style.right = isMobile ? '5px' : '20px';
         }
 
-        // Update virtual controls
-        if (this.virtualControls) {
-            const buttonSize = 'clamp(45px, 10vw, 60px)';
-            const fontSize = 'clamp(18px, 4vw, 24px)';
-            
-            // Update movement buttons
-            const buttons = this.virtualControls.querySelectorAll('button');
-            buttons.forEach(button => {
-                button.style.width = buttonSize;
-                button.style.height = buttonSize;
-                button.style.fontSize = fontSize;
-            });
-
-            // Update shoot button
-            const shootButton = document.querySelector('button[data-control="shoot"]');
-            if (shootButton) {
-                shootButton.style.width = buttonSize;
-                shootButton.style.height = buttonSize;
-                shootButton.style.fontSize = fontSize;
+        // Update car selection UI for mobile
+        if (this.carSelectionManager && this.carSelectionManager.carSelectionDiv) {
+            const carGrid = this.carSelectionManager.carSelectionDiv.querySelector('div[style*="grid-template-columns"]');
+            if (carGrid) {
+                if (isSmallMobile) {
+                    carGrid.style.gridTemplateColumns = '1fr';
+                } else if (isMobile) {
+                    carGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                } else {
+                    carGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                }
             }
+        }
+
+        // Update game over UI for mobile
+        if (this.gameOverDiv) {
+            this.gameOverDiv.style.padding = isMobile ? '10px' : '20px';
+            const buttons = this.gameOverDiv.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.style.fontSize = isMobile ? '12px' : '16px';
+                button.style.padding = isMobile ? '6px 12px' : '10px 20px';
+            });
+        }
+
+        // Update camera position for mobile
+        if (this.camera) {
+            if (isMobile) {
+                this.camera.position.set(0, 8, -60);
+            } else {
+                this.camera.position.set(0, 10, -75);
+            }
+        }
+
+        // Update car position for mobile
+        if (this.car) {
+            if (isMobile) {
+                this.car.position.set(0, 0.5, -70);
+            } else {
+                this.car.position.set(0, 0.5, -80);
+            }
+        }
+
+        // Update scroll speed for mobile
+        if (isMobile) {
+            this.scrollSpeed = 0.5;
+        } else {
+            this.scrollSpeed = 0.7;
+        }
+
+        // Update current game and best records display for mobile
+        if (this.currentStatsDiv) {
+            this.currentStatsDiv.style.fontSize = isMobile ? '10px' : '16px';
+            this.currentStatsDiv.style.padding = isMobile ? '6px' : '15px';
+        }
+
+        if (this.bestStatsDiv) {
+            this.bestStatsDiv.style.fontSize = isMobile ? '10px' : '16px';
+            this.bestStatsDiv.style.padding = isMobile ? '6px' : '15px';
+        }
+
+        // Update gauge display for mobile
+        if (this.gaugeManager) {
+            this.gaugeManager.updateGaugeSize(isMobile ? 'small' : 'normal');
         }
     }
     
@@ -2563,7 +2623,12 @@ export class Game {
     }
 
     createVirtualControls() {
-        if (!this.isMobile) return;
+        // Check if the device is a mobile device (iOS, Android, or iPad)
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        
+        // Only create virtual controls for mobile devices
+        if (!isMobileDevice) return;
 
         // Create virtual controls container
         this.virtualControls = document.createElement('div');
