@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { Game } from './game.js';
+import { inject } from '@vercel/analytics';
 
 // Initialize the game
 const game = new Game();
 game.init();
-game.animate(); 
+game.animate();
+
+// Initialize Vercel Analytics
+inject();
 
 export class RoadManager {
     constructor(scene, roadWidth, roadLength, scrollSpeed) {
