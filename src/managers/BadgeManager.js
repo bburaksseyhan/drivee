@@ -56,6 +56,7 @@ export class BadgeManager {
 
         this.unlockedBadges = new Set();
         this.badgePanel = null;
+        this.badgeButton = null;
         this.notificationQueue = [];
         this.isProcessingQueue = false;
         this.seasonProgress = new Set();
@@ -114,23 +115,24 @@ export class BadgeManager {
         this.updateBadgePanel();
 
         // Add badge button to game UI
-        const badgeButton = document.createElement('button');
-        badgeButton.innerHTML = '🏆';
-        badgeButton.style.position = 'absolute';
-        badgeButton.style.top = '20px';
-        badgeButton.style.right = '20px';
-        badgeButton.style.padding = '10px 20px';
-        badgeButton.style.fontSize = '24px';
-        badgeButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        badgeButton.style.color = 'white';
-        badgeButton.style.border = 'none';
-        badgeButton.style.borderRadius = '5px';
-        badgeButton.style.cursor = 'pointer';
-        badgeButton.style.zIndex = '1000';
-        badgeButton.onclick = () => this.toggleBadgePanel();
+        this.badgeButton = document.createElement('button');
+        this.badgeButton.innerHTML = '🏆';
+        this.badgeButton.style.position = 'absolute';
+        this.badgeButton.style.top = '20px';
+        this.badgeButton.style.right = '20px';
+        this.badgeButton.style.padding = '10px 20px';
+        this.badgeButton.style.fontSize = '24px';
+        this.badgeButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.badgeButton.style.color = 'white';
+        this.badgeButton.style.border = 'none';
+        this.badgeButton.style.borderRadius = '5px';
+        this.badgeButton.style.cursor = 'pointer';
+        this.badgeButton.style.zIndex = '1000';
+        this.badgeButton.style.display = 'none'; // Hide initially
+        this.badgeButton.onclick = () => this.toggleBadgePanel();
 
         document.body.appendChild(this.badgePanel);
-        document.body.appendChild(badgeButton);
+        document.body.appendChild(this.badgeButton);
     }
 
     updateBadgePanel() {
@@ -207,6 +209,12 @@ export class BadgeManager {
 
     hideBadgePanel() {
         this.badgePanel.style.display = 'none';
+    }
+
+    showBadgeButton() {
+        if (this.badgeButton) {
+            this.badgeButton.style.display = 'block';
+        }
     }
 
     toggleBadgePanel() {

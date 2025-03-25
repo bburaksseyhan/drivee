@@ -159,6 +159,32 @@ export class Game {
             season: 'spring',
             unlockedCars: 0
         };
+
+        // Add virtual controls properties
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                       (navigator.maxTouchPoints > 0 && navigator.msMaxTouchPoints > 0);
+        
+        // Add device type detection
+        this.deviceType = this.detectDeviceType();
+        
+        this.virtualControls = null;
+        this.touchControls = {
+            left: false,
+            right: false,
+            shoot: false
+        };
+    }
+
+    detectDeviceType() {
+        const ua = navigator.userAgent;
+        if (/iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+            return 'tablet';
+        } else if (/iPhone|iPod/i.test(ua)) {
+            return 'mobile';
+        } else if (/Android/i.test(ua)) {
+            return 'android';
+        }
+        return 'desktop';
     }
 
     createScoreDisplay() {
@@ -187,6 +213,7 @@ export class Game {
         this.seasonDiv.style.backdropFilter = 'blur(5px)';
         this.seasonDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         this.seasonDiv.style.zIndex = '1000';
+        this.seasonDiv.style.display = 'none'; // Initially hidden
         document.body.appendChild(this.seasonDiv);
 
         // Current Stats Panel
@@ -198,6 +225,7 @@ export class Game {
         this.currentStatsDiv.style.minWidth = '200px';
         this.currentStatsDiv.style.backdropFilter = 'blur(5px)';
         this.currentStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        this.currentStatsDiv.style.display = 'none'; // Initially hidden
         this.dashboardDiv.appendChild(this.currentStatsDiv);
 
         // Best Stats Panel
@@ -209,6 +237,7 @@ export class Game {
         this.bestStatsDiv.style.minWidth = '200px';
         this.bestStatsDiv.style.backdropFilter = 'blur(5px)';
         this.bestStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        this.bestStatsDiv.style.display = 'none'; // Initially hidden
         this.dashboardDiv.appendChild(this.bestStatsDiv);
 
         document.body.appendChild(this.dashboardDiv);
@@ -219,6 +248,12 @@ export class Game {
         // Initialize the history manager's UI elements
         if (this.historyManager) {
             this.historyManager.init();
+        }
+    }
+
+    showBestRecords() {
+        if (this.bestStatsDiv) {
+            this.bestStatsDiv.style.display = 'block';
         }
     }
 
@@ -299,25 +334,59 @@ export class Game {
     createPauseButton() {
         this.pauseButton = document.createElement('button');
         this.pauseButton.innerHTML = '❚❚';
-        this.pauseButton.style.position = 'absolute';
-        this.pauseButton.style.top = '20px';
+        this.pauseButton.style.position = 'fixed';
+        this.pauseButton.style.top = '130px';
         this.pauseButton.style.left = '20px';
-        this.pauseButton.style.padding = '10px 20px';
-        this.pauseButton.style.fontSize = '24px';
-        this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.pauseButton.style.width = 'clamp(35px, 8vw, 45px)';
+        this.pauseButton.style.height = 'clamp(35px, 8vw, 45px)';
+        this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
         this.pauseButton.style.color = 'white';
         this.pauseButton.style.border = 'none';
-        this.pauseButton.style.borderRadius = '5px';
+        this.pauseButton.style.borderRadius = '8px';
+        this.pauseButton.style.fontSize = 'clamp(18px, 4vw, 22px)';
         this.pauseButton.style.cursor = 'pointer';
         this.pauseButton.style.zIndex = '1000';
-        this.pauseButton.title = 'Pause Game';
-        this.pauseButton.style.display = 'none'; // Initially hidden
-        
-        this.pauseButton.onclick = () => this.togglePause();
+        this.pauseButton.style.display = 'none';
+        this.pauseButton.style.transition = 'all 0.2s ease';
+        this.pauseButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+
+        // Add hover effects
+        this.pauseButton.addEventListener('mouseover', () => {
+            this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            this.pauseButton.style.transform = 'scale(1.1)';
+            this.pauseButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+        });
+
+        this.pauseButton.addEventListener('mouseout', () => {
+            this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            this.pauseButton.style.transform = 'scale(1)';
+            this.pauseButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+        });
+
+        // Add click event
+        this.pauseButton.addEventListener('click', () => this.togglePause());
+
         document.body.appendChild(this.pauseButton);
-        
+
         // Create pause overlay
-        this.createPauseOverlay();
+        this.pauseOverlay = document.createElement('div');
+        this.pauseOverlay.style.position = 'fixed';
+        this.pauseOverlay.style.top = '0';
+        this.pauseOverlay.style.left = '0';
+        this.pauseOverlay.style.width = '100%';
+        this.pauseOverlay.style.height = '100%';
+        this.pauseOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.pauseOverlay.style.display = 'none';
+        this.pauseOverlay.style.zIndex = '999';
+        this.pauseOverlay.style.justifyContent = 'center';
+        this.pauseOverlay.style.alignItems = 'center';
+        this.pauseOverlay.style.flexDirection = 'column';
+        this.pauseOverlay.style.color = 'white';
+        this.pauseOverlay.style.fontSize = 'clamp(24px, 6vw, 36px)';
+        this.pauseOverlay.style.fontWeight = 'bold';
+        this.pauseOverlay.style.textAlign = 'center';
+        this.pauseOverlay.innerHTML = 'PAUSED<br><span style="font-size: clamp(16px, 4vw, 24px);">Click to resume</span>';
+        document.body.appendChild(this.pauseOverlay);
     }
 
     showPauseButton() {
@@ -332,64 +401,15 @@ export class Game {
         }
     }
 
-    createPauseOverlay() {
-        this.pauseOverlay = document.createElement('div');
-        this.pauseOverlay.style.position = 'absolute';
-        this.pauseOverlay.style.top = '0';
-        this.pauseOverlay.style.left = '0';
-        this.pauseOverlay.style.width = '100%';
-        this.pauseOverlay.style.height = '100%';
-        this.pauseOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.pauseOverlay.style.display = 'none';
-        this.pauseOverlay.style.flexDirection = 'column';
-        this.pauseOverlay.style.justifyContent = 'center';
-        this.pauseOverlay.style.alignItems = 'center';
-        this.pauseOverlay.style.color = 'white';
-        this.pauseOverlay.style.fontSize = '36px';
-        this.pauseOverlay.style.zIndex = '999';
-        
-        const pauseText = document.createElement('div');
-        pauseText.textContent = 'GAME PAUSED';
-        pauseText.style.marginBottom = '30px';
-        this.pauseOverlay.appendChild(pauseText);
-        
-        const continueButton = document.createElement('button');
-        continueButton.textContent = 'Continue';
-        continueButton.style.padding = '15px 30px';
-        continueButton.style.fontSize = '24px';
-        continueButton.style.backgroundColor = '#4CAF50';
-        continueButton.style.border = 'none';
-        continueButton.style.borderRadius = '5px';
-        continueButton.style.color = 'white';
-        continueButton.style.cursor = 'pointer';
-        continueButton.style.marginBottom = '20px';
-        continueButton.addEventListener('click', () => {
-            this.togglePause();
-        });
-        this.pauseOverlay.appendChild(continueButton);
-        
-        document.body.appendChild(this.pauseOverlay);
-    }
-    
     togglePause() {
         this.isPaused = !this.isPaused;
         
         if (this.isPaused) {
-            // Pause the game
-            this.isGameRunning = false;
             this.pauseButton.innerHTML = '▶';
-            this.pauseButton.title = 'Resume Game';
             this.pauseOverlay.style.display = 'flex';
-            // Set speedometer to 0 when paused
-            this.landscapeManager.resetSpeedometer();
-            this.gaugeManager.resetGauges();
         } else {
-            // Resume the game
-            this.isGameRunning = true;
             this.pauseButton.innerHTML = '❚❚';
-            this.pauseButton.title = 'Pause Game';
             this.pauseOverlay.style.display = 'none';
-            this.animate();
         }
     }
 
@@ -399,7 +419,7 @@ export class Game {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 20, 200);
         
-        // Create camera
+        // Create camera with responsive aspect ratio
         this.camera = new THREE.PerspectiveCamera(
             85,
             window.innerWidth / window.innerHeight,
@@ -409,10 +429,13 @@ export class Game {
         this.camera.position.set(0, 10, -75);
         this.camera.lookAt(0, 0, -100);
         
-        // Create renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Create renderer with responsive settings
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            alpha: true
+        });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for better performance
         this.renderer.shadowMap.enabled = true;
         document.body.appendChild(this.renderer.domElement);
         
@@ -428,6 +451,10 @@ export class Game {
             // Initialize the game with selected car
             this.initializeGameWithCar(selectedCar);
         });
+
+        // Add responsive event listeners
+        window.addEventListener('resize', this.onWindowResize.bind(this));
+        window.addEventListener('orientationchange', this.onWindowResize.bind(this));
     }
 
     setupLights() {
@@ -500,9 +527,8 @@ export class Game {
         // Apply car specs to game settings
         this.updateGameSettingsFromCar(selectedCar);
 
-        // Show UI elements after initialization
-        this.gaugeManager.showGauges();
-        this.showPauseButton();
+        // Create virtual controls for mobile
+        this.createVirtualControls();
     }
 
     createCarWithSpecs(carSpecs) {
@@ -605,6 +631,18 @@ export class Game {
                 this.countdownActive = false;
                 this.isGameRunning = true;
                 this.startTime = Date.now();
+                // Show all UI elements after countdown
+                this.gaugeManager.showGauges();
+                this.showPauseButton();
+                this.showCurrentGame();
+                this.showBestRecords();
+                this.showSeasonDisplay();
+                this.historyManager.showHistoryButton();
+                this.badgeManager.showBadgeButton();
+                // Show virtual controls for mobile devices
+                if (this.isMobile) {
+                    this.showVirtualControls();
+                }
                 this.animate();
             }, 1000);
         }
@@ -650,6 +688,17 @@ export class Game {
                 }
             }
         });
+
+        // Add touch event listeners for mobile
+        if (this.isMobile) {
+            document.addEventListener('touchstart', (event) => {
+                event.preventDefault(); // Prevent default touch behavior
+            }, { passive: false });
+
+            document.addEventListener('touchend', (event) => {
+                event.preventDefault(); // Prevent default touch behavior
+            }, { passive: false });
+        }
     }
     
     createRoad() {
@@ -1281,9 +1330,75 @@ export class Game {
     }
     
     onWindowResize() {
+        // Update camera aspect ratio
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
+
+        // Update renderer size
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Update UI elements for mobile
+        if (this.isMobile) {
+            this.updateMobileUI();
+        }
+    }
+
+    updateMobileUI() {
+        // Update dashboard position and size based on device type
+        if (this.dashboardDiv) {
+            const isTablet = this.deviceType === 'tablet';
+            this.dashboardDiv.style.width = isTablet ? '80%' : '90%';
+            this.dashboardDiv.style.maxWidth = isTablet ? '600px' : '400px';
+            this.dashboardDiv.style.fontSize = isTablet ? 'clamp(14px, 3vw, 18px)' : 'clamp(12px, 3vw, 16px)';
+        }
+
+        // Update season display
+        if (this.seasonDiv) {
+            const isTablet = this.deviceType === 'tablet';
+            this.seasonDiv.style.fontSize = isTablet ? 'clamp(16px, 4vw, 24px)' : 'clamp(14px, 4vw, 18px)';
+            this.seasonDiv.style.padding = isTablet ? 'clamp(8px, 2vw, 15px) clamp(15px, 3vw, 30px)' : 'clamp(5px, 2vw, 10px) clamp(10px, 3vw, 20px)';
+        }
+
+        // Update stats panels
+        if (this.currentStatsDiv && this.bestStatsDiv) {
+            const statsStyle = {
+                fontSize: 'clamp(12px, 3vw, 16px)',
+                padding: 'clamp(10px, 2vw, 15px)',
+                minWidth: 'clamp(150px, 40vw, 200px)'
+            };
+            Object.assign(this.currentStatsDiv.style, statsStyle);
+            Object.assign(this.bestStatsDiv.style, statsStyle);
+        }
+
+        // Update pause button
+        if (this.pauseButton) {
+            this.pauseButton.style.width = 'clamp(35px, 8vw, 45px)';
+            this.pauseButton.style.height = 'clamp(35px, 8vw, 45px)';
+            this.pauseButton.style.fontSize = 'clamp(18px, 4vw, 22px)';
+        }
+
+        // Update virtual controls
+        if (this.virtualControls) {
+            const buttonSize = 'clamp(45px, 10vw, 60px)';
+            const fontSize = 'clamp(18px, 4vw, 24px)';
+            
+            // Update movement buttons
+            const buttons = this.virtualControls.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.style.width = buttonSize;
+                button.style.height = buttonSize;
+                button.style.fontSize = fontSize;
+            });
+
+            // Update shoot button
+            const shootButton = document.querySelector('button[data-control="shoot"]');
+            if (shootButton) {
+                shootButton.style.width = buttonSize;
+                shootButton.style.height = buttonSize;
+                shootButton.style.fontSize = fontSize;
+            }
+        }
     }
     
     update() {
@@ -1446,20 +1561,20 @@ export class Game {
     }
     
     updateCarPosition(delta) {
-        // Handle left/right movement
-        if (this.keys.left && this.car.position.x > -this.roadWidth / 2 + 1) {
+        // Handle left/right movement (both keyboard and touch controls)
+        if ((this.keys.left || this.touchControls.left) && this.car.position.x > -this.roadWidth / 2 + 1) {
             this.car.position.x -= this.carSpeed * delta * 60;
         }
         
-        if (this.keys.right && this.car.position.x < this.roadWidth / 2 - 1) {
+        if ((this.keys.right || this.touchControls.right) && this.car.position.x < this.roadWidth / 2 - 1) {
             this.car.position.x += this.carSpeed * delta * 60;
         }
         
         // Add a slight tilt when turning
         const targetRotation = new THREE.Euler();
-        if (this.keys.left) {
+        if (this.keys.left || this.touchControls.left) {
             targetRotation.z = 0.1;
-        } else if (this.keys.right) {
+        } else if (this.keys.right || this.touchControls.right) {
             targetRotation.z = -0.1;
         } else {
             targetRotation.z = 0;
@@ -2432,6 +2547,119 @@ export class Game {
         // Check for game over
         if (this.health <= 0) {
             this.gameOver();
+        }
+    }
+
+    showCurrentGame() {
+        if (this.currentStatsDiv) {
+            this.currentStatsDiv.style.display = 'block';
+        }
+    }
+
+    showSeasonDisplay() {
+        if (this.seasonDiv) {
+            this.seasonDiv.style.display = 'block';
+        }
+    }
+
+    createVirtualControls() {
+        if (!this.isMobile) return;
+
+        // Create virtual controls container
+        this.virtualControls = document.createElement('div');
+        this.virtualControls.style.position = 'fixed';
+        this.virtualControls.style.bottom = '20px';
+        this.virtualControls.style.left = '20px';
+        this.virtualControls.style.zIndex = '1000';
+        this.virtualControls.style.display = 'none'; // Initially hidden
+        document.body.appendChild(this.virtualControls);
+
+        // Create left button
+        const leftButton = document.createElement('button');
+        leftButton.innerHTML = '←';
+        leftButton.style.width = '60px';
+        leftButton.style.height = '60px';
+        leftButton.style.borderRadius = '50%';
+        leftButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        leftButton.style.color = 'white';
+        leftButton.style.border = 'none';
+        leftButton.style.fontSize = '24px';
+        leftButton.style.marginRight = '20px';
+        leftButton.style.touchAction = 'none';
+        leftButton.addEventListener('touchstart', () => {
+            this.touchControls.left = true;
+            leftButton.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        });
+        leftButton.addEventListener('touchend', () => {
+            this.touchControls.left = false;
+            leftButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        });
+        this.virtualControls.appendChild(leftButton);
+
+        // Create right button
+        const rightButton = document.createElement('button');
+        rightButton.innerHTML = '→';
+        rightButton.style.width = '60px';
+        rightButton.style.height = '60px';
+        rightButton.style.borderRadius = '50%';
+        rightButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        rightButton.style.color = 'white';
+        rightButton.style.border = 'none';
+        rightButton.style.fontSize = '24px';
+        rightButton.style.touchAction = 'none';
+        rightButton.addEventListener('touchstart', () => {
+            this.touchControls.right = true;
+            rightButton.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        });
+        rightButton.addEventListener('touchend', () => {
+            this.touchControls.right = false;
+            rightButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        });
+        this.virtualControls.appendChild(rightButton);
+
+        // Create shoot button
+        const shootButton = document.createElement('button');
+        shootButton.setAttribute('data-control', 'shoot');
+        shootButton.innerHTML = '🎯';
+        shootButton.style.width = '60px';
+        shootButton.style.height = '60px';
+        shootButton.style.borderRadius = '50%';
+        shootButton.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
+        shootButton.style.color = 'white';
+        shootButton.style.border = 'none';
+        shootButton.style.fontSize = '24px';
+        shootButton.style.position = 'fixed';
+        shootButton.style.bottom = '20px';
+        shootButton.style.right = '20px';
+        shootButton.style.zIndex = '1000';
+        shootButton.style.display = 'none'; // Initially hidden
+        shootButton.style.touchAction = 'none';
+        shootButton.addEventListener('touchstart', () => {
+            this.touchControls.shoot = true;
+            shootButton.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+            this.shoot();
+        });
+        shootButton.addEventListener('touchend', () => {
+            this.touchControls.shoot = false;
+            shootButton.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
+        });
+        document.body.appendChild(shootButton);
+    }
+
+    showVirtualControls() {
+        if (this.virtualControls) {
+            this.virtualControls.style.display = 'block';
+            // Also show the shoot button
+            const shootButton = document.querySelector('button[data-control="shoot"]');
+            if (shootButton) {
+                shootButton.style.display = 'block';
+            }
+        }
+    }
+
+    hideVirtualControls() {
+        if (this.virtualControls) {
+            this.virtualControls.style.display = 'none';
         }
     }
 } 

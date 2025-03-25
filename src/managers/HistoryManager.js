@@ -29,25 +29,45 @@ export class HistoryManager {
     createHistoryButton() {
         this.historyButton = document.createElement('div');
         this.historyButton.style.position = 'absolute';
-        this.historyButton.style.top = '20px';
-        this.historyButton.style.left = '90px'; // Position next to pause button
-        this.historyButton.style.width = '50px';
-        this.historyButton.style.height = '50px';
-        this.historyButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        this.historyButton.style.top = '130px'; // Position below Level text
+        this.historyButton.style.left = '20px'; // Align with left side
+        this.historyButton.style.width = '45px';
+        this.historyButton.style.height = '45px';
+        this.historyButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
         this.historyButton.style.color = 'white';
-        this.historyButton.style.borderRadius = '50%';
-        this.historyButton.style.display = 'flex';
+        this.historyButton.style.borderRadius = '8px';
+        this.historyButton.style.display = 'none'; // Initially hidden
         this.historyButton.style.justifyContent = 'center';
         this.historyButton.style.alignItems = 'center';
-        this.historyButton.style.fontSize = '24px';
+        this.historyButton.style.fontSize = '22px';
         this.historyButton.style.cursor = 'pointer';
-        this.historyButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+        this.historyButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         this.historyButton.style.zIndex = '1000';
-        this.historyButton.innerHTML = '📊';
+        this.historyButton.style.transition = 'all 0.2s ease';
+        this.historyButton.innerHTML = '📈';
         this.historyButton.title = 'Game History';
+        
+        // Add hover effect
+        this.historyButton.addEventListener('mouseover', () => {
+            this.historyButton.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+            this.historyButton.style.transform = 'scale(1.05)';
+            this.historyButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+        });
+        
+        this.historyButton.addEventListener('mouseout', () => {
+            this.historyButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            this.historyButton.style.transform = 'scale(1)';
+            this.historyButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        });
         
         this.historyButton.addEventListener('click', () => this.toggleHistoryPanel());
         document.body.appendChild(this.historyButton);
+    }
+
+    showHistoryButton() {
+        if (this.historyButton) {
+            this.historyButton.style.display = 'flex';
+        }
     }
 
     createHistoryPanel() {

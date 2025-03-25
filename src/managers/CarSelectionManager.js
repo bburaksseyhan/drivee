@@ -808,7 +808,10 @@ export class CarSelectionManager {
         this.carSelectionDiv.style.borderRadius = '15px';
         this.carSelectionDiv.style.color = 'white';
         this.carSelectionDiv.style.fontFamily = 'Arial, sans-serif';
-        this.carSelectionDiv.style.minWidth = '800px';
+        this.carSelectionDiv.style.width = '90%';
+        this.carSelectionDiv.style.maxWidth = '1200px';
+        this.carSelectionDiv.style.maxHeight = '90vh';
+        this.carSelectionDiv.style.overflowY = 'auto';
         this.carSelectionDiv.style.backdropFilter = 'blur(10px)';
         this.carSelectionDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         this.carSelectionDiv.style.display = 'none';
@@ -824,7 +827,7 @@ export class CarSelectionManager {
         title.style.WebkitTextFillColor = 'transparent';
         title.style.backgroundClip = 'text';
         title.style.textShadow = '0 2px 4px rgba(255, 215, 0, 0.2)';
-        title.style.fontSize = '36px';
+        title.style.fontSize = 'clamp(24px, 5vw, 36px)';
         title.style.fontWeight = '600';
         title.style.letterSpacing = '1px';
         title.style.textTransform = 'uppercase';
@@ -834,9 +837,10 @@ export class CarSelectionManager {
         // Create car grid
         const carGrid = document.createElement('div');
         carGrid.style.display = 'grid';
-        carGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        carGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
         carGrid.style.gap = '20px';
         carGrid.style.marginBottom = '30px';
+        carGrid.style.width = '100%';
 
         this.cars.forEach(car => {
             const carCard = this.createCarCard(car);
@@ -850,8 +854,8 @@ export class CarSelectionManager {
         startButton.textContent = 'Start Game';
         startButton.style.display = 'block';
         startButton.style.margin = '20px auto';
-        startButton.style.padding = '15px 40px';
-        startButton.style.fontSize = '18px';
+        startButton.style.padding = 'clamp(10px, 2vw, 15px) clamp(20px, 4vw, 40px)';
+        startButton.style.fontSize = 'clamp(16px, 3vw, 18px)';
         startButton.style.backgroundColor = '#4CAF50';
         startButton.style.color = 'white';
         startButton.style.border = 'none';
@@ -870,21 +874,26 @@ export class CarSelectionManager {
         const card = document.createElement('div');
         card.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
         card.style.borderRadius = '10px';
-        card.style.padding = '20px';
+        card.style.padding = 'clamp(15px, 3vw, 20px)';
         card.style.cursor = 'pointer';
         card.style.transition = 'transform 0.3s, background-color 0.3s';
         card.style.border = '2px solid transparent';
+        card.style.width = '100%';
+        card.style.maxWidth = '400px';
+        card.style.margin = '0 auto';
 
         // Create and add 3D car preview
         const previewContainer = document.createElement('div');
-        previewContainer.style.width = '300px';
-        previewContainer.style.height = '200px';
+        previewContainer.style.width = '100%';
+        previewContainer.style.aspectRatio = '3/2';
         previewContainer.style.marginBottom = '15px';
         previewContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
         previewContainer.style.borderRadius = '5px';
         previewContainer.style.overflow = 'hidden';
         
         const preview = this.createCarPreview(car);
+        preview.style.width = '100%';
+        preview.style.height = '100%';
         previewContainer.appendChild(preview);
         card.appendChild(previewContainer);
 
@@ -892,12 +901,14 @@ export class CarSelectionManager {
         const name = document.createElement('h2');
         name.textContent = car.name;
         name.style.marginBottom = '10px';
+        name.style.fontSize = 'clamp(18px, 3vw, 24px)';
         card.appendChild(name);
 
         const model = document.createElement('p');
         model.textContent = car.model;
         model.style.color = '#aaa';
         model.style.marginBottom = '15px';
+        model.style.fontSize = 'clamp(14px, 2vw, 16px)';
         card.appendChild(model);
 
         // Specs bars
@@ -913,12 +924,12 @@ export class CarSelectionManager {
             const specName = document.createElement('div');
             specName.textContent = spec.charAt(0).toUpperCase() + spec.slice(1);
             specName.style.color = '#fff';
-            specName.style.fontSize = '14px';
+            specName.style.fontSize = 'clamp(12px, 2vw, 14px)';
             specHeader.appendChild(specName);
 
             const valueLabel = document.createElement('div');
             valueLabel.textContent = spec === 'maxSpeed' ? `${value} km/h` : `${value}%`;
-            valueLabel.style.fontSize = '14px';
+            valueLabel.style.fontSize = 'clamp(12px, 2vw, 14px)';
             valueLabel.style.color = '#FFD700';
             specHeader.appendChild(valueLabel);
 
@@ -954,7 +965,7 @@ export class CarSelectionManager {
         const price = document.createElement('div');
         price.textContent = `$${car.price.toLocaleString()}`;
         price.style.color = '#4CAF50';
-        price.style.fontSize = '20px';
+        price.style.fontSize = 'clamp(16px, 3vw, 20px)';
         price.style.marginTop = '15px';
         card.appendChild(price);
 
@@ -964,6 +975,7 @@ export class CarSelectionManager {
             lock.textContent = `🔒 Unlock at ${car.unlockRequirement.toLocaleString()} points`;
             lock.style.color = '#ff4444';
             lock.style.marginTop = '10px';
+            lock.style.fontSize = 'clamp(12px, 2vw, 14px)';
             card.appendChild(lock);
         }
 
