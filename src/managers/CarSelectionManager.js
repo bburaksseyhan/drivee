@@ -1145,9 +1145,6 @@ export class CarSelectionManager {
         if (this.gaugeManager) {
             this.gaugeManager.hideGauges();
         }
-        if (this.game) {
-            this.game.hidePauseButton();
-        }
     }
 
     hideCarSelection() {

@@ -139,7 +139,7 @@ export class HistoryManager {
         this.statsDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
         this.statsDisplay.style.borderRadius = '5px';
         document.body.appendChild(this.statsDisplay);
-        this.updateStatsDisplay();
+        //this.updateStatsDisplay();
     }
 
     toggleHistoryPanel() {
@@ -356,7 +356,7 @@ export class HistoryManager {
         }
     }
 
-    updateStatsDisplay() {
+    /*updateStatsDisplay() {
         if (!this.statsDisplay) return;
 
         const highScore = this.getHighScore();
@@ -368,7 +368,7 @@ export class HistoryManager {
             Best Distance: ${bestDistance.toFixed(1)} km<br>
             Best Time: ${this.formatTime(bestTime)}
         `;
-    }
+    }*/
 
     saveGameStats(score, distance, time, level) {
         const entry = {
@@ -388,7 +388,7 @@ export class HistoryManager {
 
         localStorage.setItem('gameHistory', JSON.stringify(this.gameHistory));
         this.updateHistoryPanel();
-        this.updateStatsDisplay();
+        //this.updateStatsDisplay();
     }
 
     loadGameHistory() {
@@ -400,7 +400,7 @@ export class HistoryManager {
         this.gameHistory = [];
         localStorage.removeItem('gameHistory');
         this.updateHistoryPanel();
-        this.updateStatsDisplay();
+        //this.updateStatsDisplay();
     }
 
     getHighScore() {

@@ -84,11 +84,6 @@ export class Game {
         this.startTime = null;
         this.elapsedTime = 0;
 
-        // Pause state
-        this.isPaused = false;
-        this.pauseButton = null;
-        this.pauseOverlay = null;
-
         // Create score display
         this.createScoreDisplay();
 
@@ -190,7 +185,7 @@ export class Game {
     createScoreDisplay() {
         // Create main dashboard container
         this.dashboardDiv = document.createElement('div');
-        this.dashboardDiv.style.position = 'absolute';
+        this.dashboardDiv.style.position = 'fixed';
         this.dashboardDiv.style.top = '20px';
         this.dashboardDiv.style.right = '20px';
         this.dashboardDiv.style.display = 'flex';
@@ -216,34 +211,61 @@ export class Game {
         this.seasonDiv.style.display = 'none'; // Initially hidden
         document.body.appendChild(this.seasonDiv);
 
+        // Create toggle buttons container
+        this.toggleButtonsDiv = document.createElement('div');
+        this.toggleButtonsDiv.style.position = 'fixed';
+        this.toggleButtonsDiv.style.top = '20px';
+        this.toggleButtonsDiv.style.right = '20px';
+        this.toggleButtonsDiv.style.display = 'flex';
+        this.toggleButtonsDiv.style.gap = '10px';
+        this.toggleButtonsDiv.style.zIndex = '1001';
+        document.body.appendChild(this.toggleButtonsDiv);
+
+        // Create Current Game toggle button
+        this.currentGameToggle = document.createElement('button');
+        this.currentGameToggle.innerHTML = '📊';
+        this.styleToggleButton(this.currentGameToggle);
+        this.currentGameToggle.addEventListener('click', () => this.toggleCurrentGame());
+        this.toggleButtonsDiv.appendChild(this.currentGameToggle);
+
+        // Create Best Records toggle button
+        this.bestRecordsToggle = document.createElement('button');
+        this.bestRecordsToggle.innerHTML = '🏆';
+        this.styleToggleButton(this.bestRecordsToggle);
+        this.bestRecordsToggle.addEventListener('click', () => this.toggleBestRecords());
+        this.toggleButtonsDiv.appendChild(this.bestRecordsToggle);
+
         // Current Stats Panel
         this.currentStatsDiv = document.createElement('div');
+        this.currentStatsDiv.style.position = 'fixed';
+        this.currentStatsDiv.style.top = '70px';
+        this.currentStatsDiv.style.right = '20px';
         this.currentStatsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
         this.currentStatsDiv.style.padding = '15px';
         this.currentStatsDiv.style.borderRadius = '10px';
         this.currentStatsDiv.style.color = 'white';
-        this.currentStatsDiv.style.minWidth = '200px';
+        this.currentStatsDiv.style.maxWidth = '300px';
+        this.currentStatsDiv.style.width = '85%';
         this.currentStatsDiv.style.backdropFilter = 'blur(5px)';
         this.currentStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         this.currentStatsDiv.style.display = 'none'; // Initially hidden
-        this.dashboardDiv.appendChild(this.currentStatsDiv);
+        document.body.appendChild(this.currentStatsDiv);
 
         // Best Stats Panel
         this.bestStatsDiv = document.createElement('div');
+        this.bestStatsDiv.style.position = 'fixed';
+        this.bestStatsDiv.style.top = '70px';
+        this.bestStatsDiv.style.right = '20px';
         this.bestStatsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
         this.bestStatsDiv.style.padding = '15px';
         this.bestStatsDiv.style.borderRadius = '10px';
         this.bestStatsDiv.style.color = 'white';
-        this.bestStatsDiv.style.minWidth = '200px';
+        this.bestStatsDiv.style.maxWidth = '300px';
+        this.bestStatsDiv.style.width = '85%';
         this.bestStatsDiv.style.backdropFilter = 'blur(5px)';
         this.bestStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         this.bestStatsDiv.style.display = 'none'; // Initially hidden
-        this.dashboardDiv.appendChild(this.bestStatsDiv);
-
-        document.body.appendChild(this.dashboardDiv);
-        
-        // Create pause button
-        this.createPauseButton();
+        document.body.appendChild(this.bestStatsDiv);
 
         // Initialize the history manager's UI elements
         if (this.historyManager) {
@@ -251,27 +273,78 @@ export class Game {
         }
     }
 
-    showBestRecords() {
-        if (this.bestStatsDiv) {
-            this.bestStatsDiv.style.display = 'block';
-            this.bestStatsDiv.style.width = '90%';
-            this.bestStatsDiv.style.maxWidth = '600px';
-            this.bestStatsDiv.style.padding = '20px';
-            this.bestStatsDiv.style.fontSize = '16px';
+    styleToggleButton(button) {
+        button.style.width = '40px';
+        button.style.height = '40px';
+        button.style.borderRadius = '50%';
+        button.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        button.style.color = 'white';
+        button.style.border = 'none';
+        button.style.fontSize = '20px';
+        button.style.cursor = 'pointer';
+        button.style.transition = 'all 0.3s ease';
+        button.style.backdropFilter = 'blur(5px)';
+        button.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+
+        button.addEventListener('mouseover', () => {
+            button.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+            button.style.transform = 'scale(1.1)';
+        });
+
+        button.addEventListener('mouseout', () => {
+            button.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            button.style.transform = 'scale(1)';
+        });
+    }
+
+    toggleCurrentGame() {
+        const isVisible = this.currentStatsDiv.style.display === 'block';
+        this.currentStatsDiv.style.display = isVisible ? 'none' : 'block';
+        this.bestStatsDiv.style.display = 'none'; // Hide best records when showing current game
+        
+        // Update button styles
+        this.currentGameToggle.style.backgroundColor = isVisible ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.9)';
+        this.currentGameToggle.style.transform = isVisible ? 'scale(1)' : 'scale(1.1)';
+        
+        // Reset best records button style
+        this.bestRecordsToggle.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        this.bestRecordsToggle.style.transform = 'scale(1)';
+    }
+
+    toggleBestRecords() {
+        const isVisible = this.bestStatsDiv.style.display === 'block';
+        this.bestStatsDiv.style.display = isVisible ? 'none' : 'block';
+        this.currentStatsDiv.style.display = 'none'; // Hide current game when showing best records
+        this.bestRecordsToggle.style.backgroundColor = isVisible ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.9)';
+    }
+
+    showCurrentGame() {
+        // Only set up the styling but don't show the panel
+        if (this.currentStatsDiv) {
+            this.currentStatsDiv.style.width = '90%';
+            this.currentStatsDiv.style.maxWidth = '600px';
+            this.currentStatsDiv.style.padding = '20px';
+            this.currentStatsDiv.style.fontSize = '16px';
 
             // Media query for mobile devices
             if (window.innerWidth <= 768) {
-                this.bestStatsDiv.style.width = '85%';
-                this.bestStatsDiv.style.maxWidth = '300px';
-                this.bestStatsDiv.style.padding = '8px';
-                this.bestStatsDiv.style.fontSize = '12px';
-                this.bestStatsDiv.style.margin = '0';
-                this.bestStatsDiv.style.position = 'fixed';
-                this.bestStatsDiv.style.top = '50%';
-                this.bestStatsDiv.style.right = '10px';
-                this.bestStatsDiv.style.transform = 'translateY(-50%)';
-                this.bestStatsDiv.style.zIndex = '1000';
+                this.currentStatsDiv.style.width = '85%';
+                this.currentStatsDiv.style.maxWidth = '300px';
+                this.currentStatsDiv.style.padding = '8px';
+                this.currentStatsDiv.style.fontSize = '12px';
+                this.currentStatsDiv.style.margin = '0';
+                this.currentStatsDiv.style.position = 'fixed';
+                this.currentStatsDiv.style.top = '50%';
+                this.currentStatsDiv.style.right = '10px';
+                this.currentStatsDiv.style.transform = 'translateY(-50%)';
+                this.currentStatsDiv.style.zIndex = '1000';
             }
+        }
+    }
+
+    showBestRecords() {
+        if (!this.isMobile) {
+            this.bestStatsDiv.style.display = 'block';
         }
     }
 
@@ -347,88 +420,6 @@ export class Game {
     updateHealthDisplay() {
         // Health updates are now handled in updateScoreDisplay
         this.updateScoreDisplay();
-    }
-
-    createPauseButton() {
-        this.pauseButton = document.createElement('button');
-        this.pauseButton.innerHTML = '❚❚';
-        this.pauseButton.style.position = 'fixed';
-        this.pauseButton.style.top = '130px';
-        this.pauseButton.style.right = '80px'; // Position next to history button
-        this.pauseButton.style.width = 'clamp(35px, 8vw, 45px)';
-        this.pauseButton.style.height = 'clamp(35px, 8vw, 45px)';
-        this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        this.pauseButton.style.color = 'white';
-        this.pauseButton.style.border = 'none';
-        this.pauseButton.style.borderRadius = '8px';
-        this.pauseButton.style.fontSize = 'clamp(18px, 4vw, 22px)';
-        this.pauseButton.style.cursor = 'pointer';
-        this.pauseButton.style.zIndex = '1000';
-        this.pauseButton.style.display = 'none';
-        this.pauseButton.style.transition = 'all 0.2s ease';
-        this.pauseButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-
-        // Add hover effects
-        this.pauseButton.addEventListener('mouseover', () => {
-            this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-            this.pauseButton.style.transform = 'scale(1.1)';
-            this.pauseButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-        });
-
-        this.pauseButton.addEventListener('mouseout', () => {
-            this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            this.pauseButton.style.transform = 'scale(1)';
-            this.pauseButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-        });
-
-        // Add click event
-        this.pauseButton.addEventListener('click', () => this.togglePause());
-
-        document.body.appendChild(this.pauseButton);
-
-        // Create pause overlay
-        this.pauseOverlay = document.createElement('div');
-        this.pauseOverlay.style.position = 'fixed';
-        this.pauseOverlay.style.top = '0';
-        this.pauseOverlay.style.left = '0';
-        this.pauseOverlay.style.width = '100%';
-        this.pauseOverlay.style.height = '100%';
-        this.pauseOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.pauseOverlay.style.display = 'none';
-        this.pauseOverlay.style.zIndex = '999';
-        this.pauseOverlay.style.justifyContent = 'center';
-        this.pauseOverlay.style.alignItems = 'center';
-        this.pauseOverlay.style.flexDirection = 'column';
-        this.pauseOverlay.style.color = 'white';
-        this.pauseOverlay.style.fontSize = 'clamp(24px, 6vw, 36px)';
-        this.pauseOverlay.style.fontWeight = 'bold';
-        this.pauseOverlay.style.textAlign = 'center';
-        this.pauseOverlay.innerHTML = 'PAUSED<br><span style="font-size: clamp(16px, 4vw, 24px);">Click to resume</span>';
-        document.body.appendChild(this.pauseOverlay);
-    }
-
-    showPauseButton() {
-        if (this.pauseButton) {
-            this.pauseButton.style.display = 'block';
-        }
-    }
-
-    hidePauseButton() {
-        if (this.pauseButton) {
-            this.pauseButton.style.display = 'none';
-        }
-    }
-
-    togglePause() {
-        this.isPaused = !this.isPaused;
-        
-        if (this.isPaused) {
-            this.pauseButton.innerHTML = '▶';
-            this.pauseOverlay.style.display = 'flex';
-        } else {
-            this.pauseButton.innerHTML = '❚❚';
-            this.pauseOverlay.style.display = 'none';
-        }
     }
 
     init() {
@@ -651,7 +642,6 @@ export class Game {
                 this.startTime = Date.now();
                 // Show all UI elements after countdown
                 this.gaugeManager.showGauges();
-                this.showPauseButton();
                 this.showCurrentGame();
                 this.showBestRecords();
                 this.showSeasonDisplay();
@@ -682,11 +672,6 @@ export class Game {
                         this.shoot();
                         break;
                 }
-            }
-            
-            // Add keyboard shortcut for pause (ESC key)
-            if (event.key === 'Escape' && !this.countdownActive && !this.isGameOver) {
-                this.togglePause();
             }
         });
         
@@ -1406,13 +1391,6 @@ export class Game {
             this.historyButton.style.right = isMobile ? '5px' : '20px';
         }
 
-        // Update pause button
-        if (this.pauseButton) {
-            this.pauseButton.style.fontSize = isMobile ? '12px' : '16px';
-            this.pauseButton.style.padding = isMobile ? '6px 10px' : '10px 15px';
-            this.pauseButton.style.right = isMobile ? '5px' : '20px';
-        }
-
         // Update car selection UI for mobile
         if (this.carSelectionManager && this.carSelectionManager.carSelectionDiv) {
             const carGrid = this.carSelectionManager.carSelectionDiv.querySelector('div[style*="grid-template-columns"]');
@@ -1480,7 +1458,7 @@ export class Game {
     }
     
     update() {
-        if (this.isGameOver || this.isPaused) {
+        if (this.isGameOver) {
             this.gaugeManager.resetGauges();
             this.landscapeManager.resetSpeedometer();
             return;
@@ -1503,7 +1481,7 @@ export class Game {
         }
 
         // Update distance and speed tracking
-        if (this.isGameRunning && !this.isPaused) {
+        if (this.isGameRunning) {
             this.distance += this.scrollSpeed * delta * 60;
             // Update speedometer with current speed
             const currentSpeed = this.scrollSpeed * 60; // Convert to m/s
@@ -1551,7 +1529,7 @@ export class Game {
                 this.unlockBadge(badge);
             }
         } else {
-            // If game is paused or not running, show speed as 0
+            // If game is not running, show speed as 0
             this.landscapeManager.updateSpeedometer(0);
         }
 
@@ -1577,11 +1555,10 @@ export class Game {
         this.updateTrees(delta);
         this.coinManager.updateCoins(delta, this.car, (points) => {
             this.score += points;
-            this.updateScoreDisplay();
+            this.levelManager.checkLevelProgression(this.score);
             // Play coin collection sound
             this.coinSound.currentTime = 0;
             this.coinSound.play().catch(error => console.log("Audio play failed:", error));
-            this.levelManager.checkLevelProgression(this.score);
         });
         this.obstacleManager.updateObstacles(delta, this.car, () => this.gameOver());
         this.vehicleManager.updateVehicles(delta);
@@ -1611,7 +1588,7 @@ export class Game {
         this.gaugeManager.updateSpeedometer(this.scrollSpeed);
 
         // Update moving obstacles
-        if (this.isGameRunning && !this.isPaused) {
+        if (this.isGameRunning) {
             this.movingObstacleManager.update(delta, this.car.position);
             this.checkMovingObstacleCollisions();
         }
@@ -1627,15 +1604,6 @@ export class Game {
                 this.car.visible = Math.floor(now * 10) % 2 === 0;
             }
         }
-
-        // Update game statistics
-        this.gameStats.distance = this.distance / 1000; // Convert to kilometers
-        this.gameStats.speed = this.scrollSpeed * 200; // Convert to km/h
-        this.gameStats.score = this.score;
-        this.gameStats.season = this.currentSeason;
-
-        // Check for badges
-        this.badgeManager.checkAndAwardBadges(this.gameStats);
     }
     
     updateCarPosition(delta) {
@@ -1682,7 +1650,6 @@ export class Game {
 
     gameOver() {
         this.isGameOver = true;
-        this.isPaused = false;
         
         // Save game stats with current badges
         this.historyManager.saveGameStats(
@@ -2372,7 +2339,7 @@ export class Game {
     }
 
     shoot() {
-        if (this.isPaused || this.isGameOver || this.countdownActive) return;
+        if (this.isGameOver || this.countdownActive) return;
         
         const now = Date.now() / 1000; // Convert to seconds
         if (now - this.lastShootTime < this.shootCooldown) return;
@@ -2625,12 +2592,6 @@ export class Game {
         // Check for game over
         if (this.health <= 0) {
             this.gameOver();
-        }
-    }
-
-    showCurrentGame() {
-        if (this.currentStatsDiv) {
-            this.currentStatsDiv.style.display = 'block';
         }
     }
 
