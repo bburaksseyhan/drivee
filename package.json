@@ -1,18 +1,21 @@
 {
-  "name": "threejs-game",
-  "private": true,
-  "version": "0.0.1",
-  "type": "module",
+  "name": "3d-car-game",
+  "version": "1.0.0",
+  "description": "3D Car Game with Three.js",
+  "main": "src/js/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "devDependencies": {
-    "vite": "^5.0.0"
-  },
   "dependencies": {
-    "@vercel/analytics": "^1.5.0",
-    "three": "^0.160.0"
+    "three": "^0.160.0",
+    "gsap": "^3.12.5"
+  },
+  "devDependencies": {
+    "vite": "^5.0.12"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

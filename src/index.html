@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Araba Oyunu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="container">
+        <div id="loading-car"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- Menu Container -->
+    <div id="menu-container" class="container hidden">
+        <h1>3D Car Game</h1>
+        <div class="menu-buttons">
+            <button id="start-button" class="menu-button">Start Game</button>
+            <button id="cars-button" class="menu-button">Cars</button>
+            <button id="medals-button" class="menu-button">Medals</button>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container" class="container hidden">
+        <!-- Game canvas will be added here dynamically -->
+    </div>
+
+    <!-- Cars Modal -->
+    <div id="cars-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Select Your Car</h2>
+            <div id="cars-grid" class="cars-grid"></div>
+            <button id="close-cars-modal" class="close-button">Close</button>
+        </div>
+    </div>
+
+    <!-- Medals Modal -->
+    <div id="medals-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Your Medals</h2>
+            <div id="medals-grid" class="medals-grid"></div>
+            <button id="close-medals-modal" class="close-button">Close</button>
+        </div>
+    </div>
+
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>

@@ -1,28 +1,23 @@
-# Three.js Road Racing Game
+# 3D Car Game
 
-A simple 3D racing game built with Three.js where you control a car moving along a road while avoiding obstacles.
+A web-based 3D car game built with Three.js and modern JavaScript.
 
-## Game Features
+## Features
 
-- 3D road environment with trees
-- Car that can be controlled with arrow keys (left/right)
-- Simple collision detection
-- Endless runner style gameplay
+- Interactive 3D car model
+- Splash screen with loading animation
+- Menu system with multiple options
+- Modern UI design
+- Responsive layout
 
-## How to Play
-
-- Use the **Left Arrow** and **Right Arrow** keys to move the car left and right
-- Avoid obstacles on the road
-- The game gets progressively more challenging as you continue
-
-## Development Setup
+## Setup
 
 1. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Start the development server:
+2. Start development server:
 ```bash
 npm run dev
 ```
@@ -32,7 +27,37 @@ npm run dev
 npm run build
 ```
 
+4. Preview production build:
+```bash
+npm run preview
+```
+
+## Deployment
+
+This project is configured for deployment on Vercel. To deploy:
+
+1. Install Vercel CLI:
+```bash
+npm install -g vercel
+```
+
+2. Deploy to Vercel:
+```bash
+vercel
+```
+
+## Project Structure
+
+- `src/` - Source files
+  - `js/` - JavaScript modules
+  - `styles/` - CSS styles
+  - `assets/` - Static assets
+  - `models/` - 3D models
+- `index.html` - Main HTML file
+
 ## Technologies Used
 
-- Three.js for 3D rendering
-- Vite for build and development 
+- Three.js - 3D graphics
+- GSAP - Animations
+- Vite - Build tool
+- Vercel - Deployment
