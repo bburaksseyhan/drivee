@@ -9,30 +9,13 @@ export class DeviceManager {
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
         // Check for Android
         if (/android/i.test(userAgent)) {
-            console.log('Device detected: Android');
             return true;
         }
         // Check for iOS
         if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-            console.log('Device detected: iOS');
             return true;
         }
-        console.log('Device detected: Not a mobile device');
         return false;
-    }
-
-    applyDeviceSpecificStyles() {
-        if (this.isMobileDevice()) {
-            console.log('Applying smaller styles for mobile devices');
-            // Apply smaller styles for mobile devices
-            const buttons = this.virtualControls.querySelectorAll('button');
-            buttons.forEach(button => {
-                button.style.width = '10px';
-                button.style.height = '10px';
-                button.style.fontSize = '5px';
-                console.log('Applied smaller styles to button:', button);
-            });
-        }
     }
 
     createVirtualControls() {
@@ -80,9 +63,6 @@ export class DeviceManager {
 
         // Append to body
         document.body.appendChild(this.virtualControls);
-
-        // Apply device-specific styles
-        this.applyDeviceSpecificStyles();
     }
 
     showVirtualControls() {

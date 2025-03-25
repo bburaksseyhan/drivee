@@ -254,6 +254,24 @@ export class Game {
     showBestRecords() {
         if (this.bestStatsDiv) {
             this.bestStatsDiv.style.display = 'block';
+            this.bestStatsDiv.style.width = '90%';
+            this.bestStatsDiv.style.maxWidth = '600px';
+            this.bestStatsDiv.style.padding = '20px';
+            this.bestStatsDiv.style.fontSize = '16px';
+
+            // Media query for mobile devices
+            if (window.innerWidth <= 768) {
+                this.bestStatsDiv.style.width = '85%';
+                this.bestStatsDiv.style.maxWidth = '300px';
+                this.bestStatsDiv.style.padding = '8px';
+                this.bestStatsDiv.style.fontSize = '12px';
+                this.bestStatsDiv.style.margin = '0';
+                this.bestStatsDiv.style.position = 'fixed';
+                this.bestStatsDiv.style.top = '50%';
+                this.bestStatsDiv.style.right = '10px';
+                this.bestStatsDiv.style.transform = 'translateY(-50%)';
+                this.bestStatsDiv.style.zIndex = '1000';
+            }
         }
     }
 
