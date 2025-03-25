@@ -404,9 +404,11 @@ export class HistoryManager {
     }
 
     getHighScore() {
-        return this.gameHistory.length > 0 
-            ? Math.max(...this.gameHistory.map(entry => entry.score))
-            : 0;
+        return Math.max(...this.gameHistory.map(entry => entry.score), 0);
+    }
+
+    getGameHistory() {
+        return this.gameHistory;
     }
 
     getBestDistance() {

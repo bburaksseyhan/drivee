@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CoinManager } from './managers/CoinManager.js';
 import { ObstacleManager } from './managers/ObstacleManager.js';
 import { LevelManager } from './managers/LevelManager.js';
@@ -78,6 +77,9 @@ export class Game {
         this.landscapeManager = null;
         this.gaugeManager = null;
         this.historyManager = null;
+        this.carSelectionManager = null;
+        this.badgeManager = null;
+        this.seasonManager = null;
 
         // Game tracking stats
         this.distance = 0;
@@ -143,6 +145,7 @@ export class Game {
         this.badgeManager = new BadgeManager();
         this.historyManager = new HistoryManager();
         this.historyManager.setBadgeManager(this.badgeManager);
+        this.historyManager.init(); // Initialize History Manager
 
         // Track game statistics
         this.gameStats = {
@@ -228,13 +231,6 @@ export class Game {
         this.currentGameToggle.addEventListener('click', () => this.toggleCurrentGame());
         this.toggleButtonsDiv.appendChild(this.currentGameToggle);
 
-        // Create Best Records toggle button
-        this.bestRecordsToggle = document.createElement('button');
-        this.bestRecordsToggle.innerHTML = '🏆';
-        this.styleToggleButton(this.bestRecordsToggle);
-        this.bestRecordsToggle.addEventListener('click', () => this.toggleBestRecords());
-        this.toggleButtonsDiv.appendChild(this.bestRecordsToggle);
-
         // Current Stats Panel
         this.currentStatsDiv = document.createElement('div');
         this.currentStatsDiv.style.position = 'fixed';
@@ -249,28 +245,43 @@ export class Game {
         this.currentStatsDiv.style.backdropFilter = 'blur(5px)';
         this.currentStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
         this.currentStatsDiv.style.display = 'none'; // Initially hidden
+        this.currentStatsDiv.style.transition = 'all 0.3s ease';
+        
+        // Add touch event handling for mobile
+        if (this.isMobile) {
+            this.currentStatsDiv.addEventListener('touchstart', (e) => e.stopPropagation());
+            this.currentStatsDiv.addEventListener('touchmove', (e) => e.stopPropagation());
+            this.currentStatsDiv.addEventListener('touchend', (e) => e.stopPropagation());
+        }
+        
         document.body.appendChild(this.currentStatsDiv);
 
-        // Best Stats Panel
-        this.bestStatsDiv = document.createElement('div');
-        this.bestStatsDiv.style.position = 'fixed';
-        this.bestStatsDiv.style.top = '70px';
-        this.bestStatsDiv.style.right = '20px';
-        this.bestStatsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.bestStatsDiv.style.padding = '15px';
-        this.bestStatsDiv.style.borderRadius = '10px';
-        this.bestStatsDiv.style.color = 'white';
-        this.bestStatsDiv.style.maxWidth = '300px';
-        this.bestStatsDiv.style.width = '85%';
-        this.bestStatsDiv.style.backdropFilter = 'blur(5px)';
-        this.bestStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-        this.bestStatsDiv.style.display = 'none'; // Initially hidden
-        document.body.appendChild(this.bestStatsDiv);
+        // Create Settings button
+        this.settingsToggle = document.createElement('button');
+        this.settingsToggle.innerHTML = '⚙️';
+        this.styleToggleButton(this.settingsToggle);
+        this.settingsToggle.addEventListener('click', () => this.toggleSettings());
+        this.toggleButtonsDiv.appendChild(this.settingsToggle);
 
-        // Initialize the history manager's UI elements
-        if (this.historyManager) {
-            this.historyManager.init();
-        }
+        // Create Settings Menu
+        this.settingsMenu = document.createElement('div');
+        this.settingsMenu.style.position = 'fixed';
+        this.settingsMenu.style.top = '50%';
+        this.settingsMenu.style.left = '50%';
+        this.settingsMenu.style.transform = 'translate(-50%, -50%)';
+        this.settingsMenu.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        this.settingsMenu.style.padding = '20px';
+        this.settingsMenu.style.borderRadius = '10px';
+        this.settingsMenu.style.color = 'white';
+        this.settingsMenu.style.minWidth = '300px';
+        this.settingsMenu.style.backdropFilter = 'blur(5px)';
+        this.settingsMenu.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        this.settingsMenu.style.display = 'none';
+        this.settingsMenu.style.zIndex = '2000';
+        document.body.appendChild(this.settingsMenu);
+
+        // Create menu content
+        this.updateSettingsMenu();
     }
 
     styleToggleButton(button) {
@@ -300,51 +311,28 @@ export class Game {
     toggleCurrentGame() {
         const isVisible = this.currentStatsDiv.style.display === 'block';
         this.currentStatsDiv.style.display = isVisible ? 'none' : 'block';
-        this.bestStatsDiv.style.display = 'none'; // Hide best records when showing current game
         
         // Update button styles
         this.currentGameToggle.style.backgroundColor = isVisible ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.9)';
         this.currentGameToggle.style.transform = isVisible ? 'scale(1)' : 'scale(1.1)';
-        
-        // Reset best records button style
-        this.bestRecordsToggle.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        this.bestRecordsToggle.style.transform = 'scale(1)';
-    }
 
-    toggleBestRecords() {
-        const isVisible = this.bestStatsDiv.style.display === 'block';
-        this.bestStatsDiv.style.display = isVisible ? 'none' : 'block';
-        this.currentStatsDiv.style.display = 'none'; // Hide current game when showing best records
-        this.bestRecordsToggle.style.backgroundColor = isVisible ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.9)';
-    }
-
-    showCurrentGame() {
-        // Only set up the styling but don't show the panel
-        if (this.currentStatsDiv) {
-            this.currentStatsDiv.style.width = '90%';
-            this.currentStatsDiv.style.maxWidth = '600px';
-            this.currentStatsDiv.style.padding = '20px';
-            this.currentStatsDiv.style.fontSize = '16px';
-
-            // Media query for mobile devices
-            if (window.innerWidth <= 768) {
+        // Mobile-specific adjustments
+        if (this.isMobile) {
+            if (!isVisible) {
+                this.currentStatsDiv.style.position = 'fixed';
+                this.currentStatsDiv.style.top = '20%';
+                this.currentStatsDiv.style.left = '50%';
+                this.currentStatsDiv.style.transform = 'translateX(-50%)';
                 this.currentStatsDiv.style.width = '85%';
                 this.currentStatsDiv.style.maxWidth = '300px';
-                this.currentStatsDiv.style.padding = '8px';
-                this.currentStatsDiv.style.fontSize = '12px';
-                this.currentStatsDiv.style.margin = '0';
-                this.currentStatsDiv.style.position = 'fixed';
-                this.currentStatsDiv.style.top = '50%';
-                this.currentStatsDiv.style.right = '10px';
-                this.currentStatsDiv.style.transform = 'translateY(-50%)';
+                this.currentStatsDiv.style.padding = '10px';
+                this.currentStatsDiv.style.fontSize = '14px';
                 this.currentStatsDiv.style.zIndex = '1000';
+                this.currentStatsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                this.currentStatsDiv.style.backdropFilter = 'blur(5px)';
+                this.currentStatsDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                this.currentStatsDiv.style.borderRadius = '10px';
             }
-        }
-    }
-
-    showBestRecords() {
-        if (!this.isMobile) {
-            this.bestStatsDiv.style.display = 'block';
         }
     }
 
@@ -388,27 +376,6 @@ export class Game {
                 
                 <span>❤️ Health:</span>
                 <span style="text-align: right; color: ${healthColor};">${healthPercentage}%</span>
-            </div>`;
-
-        // Get best stats from history manager
-        const bestStats = this.historyManager ? this.historyManager.getBestStats() : { score: 0, distance: 0, time: 0 };
-        const bestTime = this.formatTime(bestStats.time || 0);
-        const bestDistance = ((bestStats.distance || 0) / 1000).toFixed(1);
-
-        // Update best stats
-        this.bestStatsDiv.innerHTML = `
-            <div style="font-size: 20px; margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 5px;">
-                Best Records 🏆
-            </div>
-            <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;">
-                <span>🎯 High Score:</span>
-                <span style="text-align: right; color: #64B5F6;">${bestStats.score || 0}</span>
-                
-                <span>🛣️ Best Distance:</span>
-                <span style="text-align: right; color: #81C784;">${bestDistance} km</span>
-                
-                <span>⏱️ Best Time:</span>
-                <span style="text-align: right; color: #FFB74D;">${bestTime}</span>
             </div>`;
     }
 
@@ -642,8 +609,8 @@ export class Game {
                 this.startTime = Date.now();
                 // Show all UI elements after countdown
                 this.gaugeManager.showGauges();
-                this.showCurrentGame();
-                this.showBestRecords();
+                //this.showCurrentGame();
+                //this.showBestRecords();
                 this.showSeasonDisplay();
                 this.historyManager.showHistoryButton();
                 this.badgeManager.showBadgeButton();
@@ -1458,152 +1425,37 @@ export class Game {
     }
     
     update() {
-        if (this.isGameOver) {
-            this.gaugeManager.resetGauges();
-            this.landscapeManager.resetSpeedometer();
-            return;
+        if (this.isGameOver || this.isPaused) return;
+
+        // Update game time
+        this.elapsedTime += 1/60;
+
+        // Update car position based on speed
+        this.car.position.z += this.speed;
+
+        // Update distance
+        this.distance += this.speed;
+
+        // Update speed based on input
+        if (this.keys.ArrowUp || this.touchControls.up) {
+            this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+        } else if (this.keys.ArrowDown || this.touchControls.down) {
+            this.speed = Math.max(this.speed - this.deceleration, 0);
         }
 
-        // Check if health is 0 or below
-        if (this.health <= 0) {
-            this.health = 0; // Ensure health doesn't go below 0
-            this.updateHealthDisplay();
-            this.gameOver();
-            return;
-        }
+        // Update game managers
+        this.obstacleManager.update(this.speed);
+        this.coinManager.update(this.speed);
+        this.seasonManager.update(this.distance);
 
-        const delta = this.clock.getDelta();
-        const currentTime = Date.now() / 1000;
+        // Check for collisions
+        this.checkCollisions();
 
-        // Update time tracking
-        if (this.startTime !== null) {
-            this.elapsedTime = (Date.now() - this.startTime) / 1000;
-        }
+        // Update level
+        this.updateLevel();
 
-        // Update distance and speed tracking
-        if (this.isGameRunning) {
-            this.distance += this.scrollSpeed * delta * 60;
-            // Update speedometer with current speed
-            const currentSpeed = this.scrollSpeed * 60; // Convert to m/s
-            this.landscapeManager.updateSpeedometer(currentSpeed);
-
-            // Track time at max speed for Speed Survivor badge
-            if (currentSpeed >= this.maxSpeed * 0.95) { // 95% of max speed
-                if (!this.maxSpeedStartTime) {
-                    this.maxSpeedStartTime = currentTime;
-                } else if (currentTime - this.maxSpeedStartTime >= 300 && !this.unlockedBadges.has('speed_survivor')) {
-                    const badge = this.badges.special.find(b => b.id === 'speed_survivor');
-                    this.unlockBadge(badge);
-                }
-            } else {
-                this.maxSpeedStartTime = null;
-            }
-
-            // Track night driving for Night Rider badge
-            const phase = (this.clock.getElapsedTime() % 60) / 60;
-            if (phase >= 0.75 || phase < 0.25) { // Night time
-                if (!this.nightDrivingStartTime) {
-                    this.nightDrivingStartTime = currentTime;
-                    this.nightDrivingDistance = 0;
-                }
-                this.nightDrivingDistance += this.scrollSpeed * delta * 60;
-                
-                // Check for Night Rider badge
-                if (this.nightDrivingDistance >= 10000 && !this.unlockedBadges.has('night_rider')) {
-                    const badge = this.badges.special.find(b => b.id === 'night_rider');
-                    this.unlockBadge(badge);
-                }
-
-                // Check for Rush Hour Hero badge
-                if (this.score >= 1000 && !this.unlockedBadges.has('rush_hour')) {
-                    const badge = this.badges.challenges.find(b => b.id === 'rush_hour');
-                    this.unlockBadge(badge);
-                }
-            } else {
-                this.nightDrivingStartTime = null;
-            }
-
-            // Check for Marathon Runner badge
-            if (this.elapsedTime >= 1800 && !this.unlockedBadges.has('marathon_runner')) {
-                const badge = this.badges.challenges.find(b => b.id === 'marathon_runner');
-                this.unlockBadge(badge);
-            }
-        } else {
-            // If game is not running, show speed as 0
-            this.landscapeManager.updateSpeedometer(0);
-        }
-
-        // Update game statistics
-        this.gameStats = {
-            distance: this.distance / 1000, // Convert to kilometers
-            speed: this.scrollSpeed * 200, // Convert to km/h
-            score: this.score,
-            collisions: this.collisionCount,
-            coins: this.coinCount,
-            season: this.currentSeason,
-            unlockedCars: this.carSelectionManager.getUnlockedCarsCount()
-        };
-
-        // Check for badges
-        this.badgeManager.checkAndAwardBadges(this.gameStats);
-
-        // Continue with regular updates
-        this.updateBullets(delta);
-        this.updateScoreDisplay();
-        this.updateDayNightCycle();
-        this.updateRoad(delta);
-        this.updateTrees(delta);
-        this.coinManager.updateCoins(delta, this.car, (points) => {
-            this.score += points;
-            this.levelManager.checkLevelProgression(this.score);
-            // Play coin collection sound
-            this.coinSound.currentTime = 0;
-            this.coinSound.play().catch(error => console.log("Audio play failed:", error));
-        });
-        this.obstacleManager.updateObstacles(delta, this.car, () => this.gameOver());
-        this.vehicleManager.updateVehicles(delta);
-        this.updateUfos(delta);
-        this.updateAircraft(delta);
-
-        // Update car and camera
-        this.updateCarPosition(delta);
-        this.updateCamera();
-
-        this.roadManager.updateRoad(delta);
-
-        // Update airport flights
-        this.updateAirportFlights(delta);
-
-        // Update environment
-        this.landscapeManager.updateEnvironment(delta);
-
-        // Change season based on time
-        this.lastSeasonChange += delta;
-        if (this.lastSeasonChange > this.seasonChangeInterval) {
-            this.changeSeason();
-            this.lastSeasonChange = 0;
-        }
-
-        // Update speedometer and RPM gauge
-        this.gaugeManager.updateSpeedometer(this.scrollSpeed);
-
-        // Update moving obstacles
-        if (this.isGameRunning) {
-            this.movingObstacleManager.update(delta, this.car.position);
-            this.checkMovingObstacleCollisions();
-        }
-
-        // Update invulnerability
-        if (this.isInvulnerable) {
-            const now = Date.now() / 1000;
-            if (now - this.lastHitTime > this.invulnerabilityDuration) {
-                this.isInvulnerable = false;
-                this.car.visible = true;
-            } else {
-                // Flash the car during invulnerability
-                this.car.visible = Math.floor(now * 10) % 2 === 0;
-            }
-        }
+        // Update game stats
+        this.updateGameStats();
     }
     
     updateCarPosition(delta) {
@@ -1640,9 +1492,9 @@ export class Game {
     }
     
     animate() {
-        if (!this.isGameRunning) return;
-        
-        requestAnimationFrame(this.animate.bind(this));
+        if (this.isGameOver || this.isPaused) return; // Add pause check
+
+        requestAnimationFrame(() => this.animate());
         
         this.update();
         this.render();
@@ -2705,5 +2557,369 @@ export class Game {
         if (this.virtualControls) {
             this.virtualControls.style.display = 'none';
         }
+    }
+
+    showGameOverScreen() {
+        // Create game over container
+        this.gameOverDiv = document.createElement('div');
+        this.gameOverDiv.style.position = 'fixed';
+        this.gameOverDiv.style.top = '50%';
+        this.gameOverDiv.style.left = '50%';
+        this.gameOverDiv.style.transform = 'translate(-50%, -50%)';
+        this.gameOverDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        this.gameOverDiv.style.padding = '20px';
+        this.gameOverDiv.style.borderRadius = '10px';
+        this.gameOverDiv.style.color = 'white';
+        this.gameOverDiv.style.textAlign = 'center';
+        this.gameOverDiv.style.zIndex = '2000';
+        this.gameOverDiv.style.minWidth = '300px';
+        this.gameOverDiv.style.backdropFilter = 'blur(5px)';
+        this.gameOverDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+
+        // Format final stats
+        const distanceKm = (this.distance / 1000).toFixed(1);
+        const timeStr = this.formatTime(this.elapsedTime);
+
+        // Create game over content
+        this.gameOverDiv.innerHTML = `
+            <h2 style="color: #FF5252; margin: 0 0 20px 0; font-size: 28px;">Game Over</h2>
+            <div style="margin-bottom: 20px; font-size: 18px;">
+                <div style="margin: 10px 0;">
+                    <span style="color: #64B5F6;">Final Score: ${this.score}</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <span style="color: #81C784;">Distance: ${distanceKm} km</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <span style="color: #FFB74D;">Time: ${timeStr}</span>
+                </div>
+            </div>
+            <button id="restartButton" style="
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                margin: 10px;
+                transition: background-color 0.3s">
+                Play Again
+            </button>
+            <button id="mainMenuButton" style="
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                margin: 10px;
+                transition: background-color 0.3s">
+                Main Menu
+            </button>
+        `;
+
+        // Add event listeners to buttons
+        const restartButton = this.gameOverDiv.querySelector('#restartButton');
+        restartButton.addEventListener('mouseover', () => {
+            restartButton.style.backgroundColor = '#45a049';
+        });
+        restartButton.addEventListener('mouseout', () => {
+            restartButton.style.backgroundColor = '#4CAF50';
+        });
+        restartButton.addEventListener('click', () => {
+            document.body.removeChild(this.gameOverDiv);
+            this.restartGame();
+        });
+
+        const mainMenuButton = this.gameOverDiv.querySelector('#mainMenuButton');
+        mainMenuButton.addEventListener('mouseover', () => {
+            mainMenuButton.style.backgroundColor = '#1976D2';
+        });
+        mainMenuButton.addEventListener('mouseout', () => {
+            mainMenuButton.style.backgroundColor = '#2196F3';
+        });
+        mainMenuButton.addEventListener('click', () => {
+            document.body.removeChild(this.gameOverDiv);
+            this.returnToMainMenu();
+        });
+
+        // Add to document
+        document.body.appendChild(this.gameOverDiv);
+
+        // Hide virtual controls if they exist
+        this.hideVirtualControls();
+    }
+
+    restartGame() {
+        // Reset game state
+        this.score = 0;
+        this.distance = 0;
+        this.health = this.maxHealth;
+        this.isGameOver = false;
+        this.startTime = null;
+        this.elapsedTime = 0;
+
+        // Reset managers
+        if (this.coinManager) this.coinManager.reset();
+        if (this.obstacleManager) this.obstacleManager.reset();
+        if (this.movingObstacleManager) this.movingObstacleManager.reset();
+        if (this.gaugeManager) this.gaugeManager.reset();
+
+        // Reset car position
+        if (this.car) {
+            this.car.position.set(this.carPosition.x, this.carPosition.y, this.carPosition.z);
+            this.car.rotation.set(0, 0, 0);
+        }
+
+        // Show car selection
+        this.carSelectionManager.showCarSelection();
+    }
+
+    returnToMainMenu() {
+        // Reset game state
+        this.score = 0;
+        this.distance = 0;
+        this.health = this.maxHealth;
+        this.isGameOver = false;
+        this.startTime = null;
+        this.elapsedTime = 0;
+
+        // Show car selection
+        this.carSelectionManager.showCarSelection();
+    }
+
+    updateSettingsMenu() {
+        this.settingsMenu.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #64B5F6; margin: 0;">Settings</h2>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button id="historyButton" class="menu-button" style="
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 15px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    transition: background-color 0.3s">
+                    📜 History
+                </button>
+                <button id="badgesButton" class="menu-button" style="
+                    background-color: #FFA726;
+                    color: white;
+                    border: none;
+                    padding: 15px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    transition: background-color 0.3s">
+                    🏅 Badges
+                </button>
+                <button id="recordsButton" class="menu-button" style="
+                    background-color: #EF5350;
+                    color: white;
+                    border: none;
+                    padding: 15px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    transition: background-color 0.3s">
+                    🏆 Best Records
+                </button>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="closeSettings" style="
+                    background-color: #757575;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: background-color 0.3s">
+                    Close
+                </button>
+            </div>
+        `;
+
+        // Add event listeners
+        const buttons = this.settingsMenu.querySelectorAll('.menu-button');
+        buttons.forEach(button => {
+            button.addEventListener('mouseover', () => {
+                button.style.filter = 'brightness(1.2)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.filter = 'brightness(1)';
+            });
+        });
+
+        // Add click handlers
+        this.settingsMenu.querySelector('#historyButton').addEventListener('click', () => this.showHistorySubmenu());
+        this.settingsMenu.querySelector('#badgesButton').addEventListener('click', () => this.showBadgesSubmenu());
+        this.settingsMenu.querySelector('#recordsButton').addEventListener('click', () => this.showRecordsSubmenu());
+        this.settingsMenu.querySelector('#closeSettings').addEventListener('click', () => this.toggleSettings());
+    }
+
+    toggleSettings() {
+        const isVisible = this.settingsMenu.style.display === 'block';
+        this.settingsMenu.style.display = isVisible ? 'none' : 'block';
+        this.settingsToggle.style.backgroundColor = isVisible ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.9)';
+        this.settingsToggle.style.transform = isVisible ? 'scale(1)' : 'scale(1.1)';
+        
+        // Toggle pause state
+        this.isPaused = !isVisible;
+        
+        // Update UI to show pause state
+        if (this.isPaused) {
+            // Create pause overlay
+            if (!this.pauseOverlay) {
+                this.pauseOverlay = document.createElement('div');
+                this.pauseOverlay.style.position = 'fixed';
+                this.pauseOverlay.style.top = '50%';
+                this.pauseOverlay.style.left = '50%';
+                this.pauseOverlay.style.transform = 'translate(-50%, -50%)';
+                this.pauseOverlay.style.color = 'white';
+                this.pauseOverlay.style.fontSize = '48px';
+                this.pauseOverlay.style.fontWeight = 'bold';
+                this.pauseOverlay.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+                this.pauseOverlay.style.zIndex = '1999';
+                this.pauseOverlay.textContent = 'PAUSED';
+                document.body.appendChild(this.pauseOverlay);
+            }
+        } else {
+            // Remove pause overlay
+            if (this.pauseOverlay) {
+                this.pauseOverlay.remove();
+                this.pauseOverlay = null;
+            }
+        }
+    }
+
+    showHistorySubmenu() {
+        const gameHistory = this.historyManager.getGameHistory();
+        this.settingsMenu.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #4CAF50; margin: 0;">Game History</h2>
+            </div>
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                ${gameHistory.map((game, index) => `
+                    <div style="
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 10px;
+                        margin: 5px 0;
+                        border-radius: 5px;
+                        display: grid;
+                        grid-template-columns: auto 1fr;
+                        gap: 10px;">
+                        <div style="color: #4CAF50;">Game ${index + 1}:</div>
+                        <div style="text-align: right;">
+                            <div>Score: ${game.score}</div>
+                            <div>Distance: ${game.distance.toFixed(1)} km</div>
+                            <div>Time: ${this.formatTime(game.time)}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="text-align: center;">
+                <button id="backButton" style="
+                    background-color: #757575;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: background-color 0.3s">
+                    Back
+                </button>
+            </div>
+        `;
+        this.settingsMenu.querySelector('#backButton').addEventListener('click', () => this.updateSettingsMenu());
+    }
+
+    showBadgesSubmenu() {
+        const badges = this.badgeManager.getAllBadges();
+        this.settingsMenu.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #FFA726; margin: 0;">Badges</h2>
+            </div>
+            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                ${badges.map(badge => `
+                    <div style="
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 10px;
+                        margin: 5px 0;
+                        border-radius: 5px;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;">
+                        <div style="font-size: 24px;">${badge.icon}</div>
+                        <div>
+                            <div style="color: #FFA726;">${badge.name}</div>
+                            <div style="font-size: 12px; opacity: 0.8;">${badge.description}</div>
+                        </div>
+                        <div style="margin-left: auto; color: ${badge.unlocked ? '#4CAF50' : '#757575'};">
+                            ${badge.unlocked ? '✓' : '🔒'}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="text-align: center;">
+                <button id="backButton" style="
+                    background-color: #757575;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: background-color 0.3s">
+                    Back
+                </button>
+            </div>
+        `;
+        this.settingsMenu.querySelector('#backButton').addEventListener('click', () => this.updateSettingsMenu());
+    }
+
+    showRecordsSubmenu() {
+        const bestStats = this.historyManager.getBestStats();
+        this.settingsMenu.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #EF5350; margin: 0;">Best Records</h2>
+            </div>
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 20px;">
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: center;">
+                    <div style="color: #64B5F6;">🎯 High Score:</div>
+                    <div style="text-align: right; color: #64B5F6;">${bestStats.score || 0}</div>
+                    
+                    <div style="color: #81C784;">🛣️ Best Distance:</div>
+                    <div style="text-align: right; color: #81C784;">${((bestStats.distance || 0) / 1000).toFixed(1)} km</div>
+                    
+                    <div style="color: #FFB74D;">⏱️ Best Time:</div>
+                    <div style="text-align: right; color: #FFB74D;">${this.formatTime(bestStats.time || 0)}</div>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <button id="backButton" style="
+                    background-color: #757575;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: background-color 0.3s">
+                    Back
+                </button>
+            </div>
+        `;
+        this.settingsMenu.querySelector('#backButton').addEventListener('click', () => this.updateSettingsMenu());
     }
 } 

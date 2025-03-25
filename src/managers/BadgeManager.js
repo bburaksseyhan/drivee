@@ -407,6 +407,14 @@ export class BadgeManager {
         return Object.values(this.badges).reduce((total, category) => total + category.length, 0);
     }
 
+    getAllBadges() {
+        // Flatten all badges from all categories into a single array
+        return Object.values(this.badges).flat().map(badge => ({
+            ...badge,
+            unlocked: this.unlockedBadges.has(badge.id)
+        }));
+    }
+
     // Add methods to update combat stats
     updateCombatStats(type) {
         if (type === 'tank') {
