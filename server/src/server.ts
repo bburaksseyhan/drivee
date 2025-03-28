@@ -22,19 +22,9 @@ interface Participant {
   vote?: number;
 }
 
-interface EffortItem {
-  id: string;
-  title: string;
-  description: string;
-  votes: Array<{ username: string; vote: number }>;
-  status: 'pending' | 'voting' | 'completed';
-}
-
 interface Room {
   participants: Participant[];
-  effortItems: EffortItem[];
   isVoting: boolean;
-  showResults: boolean;
 }
 
 const rooms = new Map<string, Room>();
@@ -52,9 +42,7 @@ io.on('connection', (socket) => {
     if (!rooms.has(roomId)) {
       rooms.set(roomId, {
         participants: [],
-        effortItems: [],
-        isVoting: false,
-        showResults: false
+        isVoting: false
       });
     }
 
@@ -74,24 +62,7 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('newParticipant', { username });
   });
 
-  socket.on('addEffortItem', ({ roomId, item }) => {
-    console.log(`Adding new effort item to room ${roomId}`);
-    
-    const room = rooms.get(roomId);
-    if (!room) return;
-
-    room.effortItems.push(item);
-    io.to(roomId).emit('newEffortItem', item);
-  });
-
-  socket.on('vote', ({ roomId, username, itemId, vote }) => {
-    console.log(`Oy verildi:
-      Kullanıcı: ${username}
-      Oda: ${roomId}
-      Eforlama Öğesi: ${itemId}
-      Verilen Oy: ${vote}
-    `);
-    
+  socket.on('vote', ({ roomId, username, vote }) => {
     const room = rooms.get(roomId);
     if (!room) return;
 
@@ -107,76 +78,29 @@ io.on('connection', (socket) => {
       vote
     });
 
-    // Tüm katılımcıların oylarını kontrol et
-    const allVoted = room.participants.every(p => p.vote !== undefined);
-    if (allVoted) {
-      console.log('Tüm katılımcılar oy verdi, sonuçlar gönderiliyor...');
-      // Tüm oyları topla
-      const results = room.participants.map(p => ({
-        username: p.username,
-        vote: p.vote
-      }));
-
-      // Sonuçları gönder
-      io.to(roomId).emit('votingResults', itemId, results);
-    }
+    io.to(roomId).emit('participantsUpdate', room.participants);
   });
 
-  socket.on('startVoting', ({ roomId, itemId }) => {
-    console.log(`Starting voting for item ${itemId} in room ${roomId}`);
-    
+  socket.on('startVoting', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
-
-    const effortItem = room.effortItems.find(item => item.id === itemId);
-    if (!effortItem) return;
 
     room.isVoting = true;
-    room.showResults = false;
-    effortItem.status = 'voting';
-    effortItem.votes = [];
-
     // Tüm katılımcıların oylarını sıfırla
     room.participants.forEach(p => p.vote = undefined);
     io.to(roomId).emit('participantsUpdate', room.participants);
-
-    io.to(roomId).emit('votingStart', itemId);
+    io.to(roomId).emit('votingStarted');
   });
 
-  socket.on('showResults', ({ roomId, itemId }) => {
-    console.log(`Showing results for item ${itemId} in room ${roomId}`);
-    
+  socket.on('newRound', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
 
-    const effortItem = room.effortItems.find(item => item.id === itemId);
-    if (!effortItem) return;
-
-    room.isVoting = false;
-    room.showResults = true;
-    effortItem.status = 'completed';
-
-    // Sonuçları gönder
-    io.to(roomId).emit('votingResults', itemId, effortItem.votes);
-  });
-
-  socket.on('resetVoting', ({ roomId, itemId }) => {
-    console.log(`Resetting voting for item ${itemId} in room ${roomId}`);
-    
-    const room = rooms.get(roomId);
-    if (!room) return;
-
-    const effortItem = room.effortItems.find(item => item.id === itemId);
-    if (!effortItem) return;
-
-    room.isVoting = false;
-    room.showResults = false;
-    effortItem.status = 'pending';
-    effortItem.votes = [];
-
+    room.isVoting = true;
     // Tüm katılımcıların oylarını sıfırla
     room.participants.forEach(p => p.vote = undefined);
     io.to(roomId).emit('participantsUpdate', room.participants);
+    io.to(roomId).emit('roundStarted');
   });
 
   socket.on('leaveRoom', ({ roomId, username }) => {

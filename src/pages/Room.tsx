@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { Card } from '../components/Card';
@@ -10,6 +10,7 @@ import { VotePopup } from '../components/VotePopup';
 interface LocationState {
   roomId: string;
   username: string;
+  teamName: string;
   isHost: boolean;
   participantCount: number;
 }
@@ -18,25 +19,31 @@ function Room() {
   const location = useLocation();
   const navigate = useNavigate();
   const { socket, isConnected } = useSocket();
-  const [participants, setParticipants] = useState<Array<{ id: string; username: string; vote?: number; isHost?: boolean }>>([]);
+  const [participants, setParticipants] = useState<Array<{ id: string; username: string; teamName: string; vote?: number; isHost?: boolean }>>([]);
   const [notifications, setNotifications] = useState<Array<{ id: number; message: string; type: 'success' | 'error' }>>([]);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [username, setUsername] = useState('');
+  const [teamName, setTeamName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [showVotePopup, setShowVotePopup] = useState(false);
   const [pendingVote, setPendingVote] = useState<number | null>(null);
   const [showConnectionPopup, setShowConnectionPopup] = useState(false);
+  const [isVotingEnabled, setIsVotingEnabled] = useState(false);
+  const [votingDuration, setVotingDuration] = useState<number>(60); // Varsayılan 60 saniye
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const state = location.state as LocationState;
-    if (!state?.roomId || !state?.username) {
+    if (!state?.roomId || !state?.username || !state?.teamName) {
       navigate('/');
       return;
     }
 
     setRoomId(state.roomId);
     setUsername(state.username);
+    setTeamName(state.teamName);
     setIsHost(state.isHost);
   }, [location, navigate]);
 
@@ -62,19 +69,22 @@ function Room() {
 
     // Odaya katılma
     if (!isConnected) {
-      socket.emit('joinRoom', { roomId, username });
+      socket.emit('joinRoom', { roomId, username, teamName });
     }
 
     // Katılımcı listesi güncelleme
-    const handleParticipantsUpdate = (updatedParticipants: Array<{ id: string; username: string; vote?: number; isHost?: boolean }>) => {
+    const handleParticipantsUpdate = (updatedParticipants: Array<{ id: string; username: string; teamName: string; vote?: number; isHost?: boolean }>) => {
       setParticipants(updatedParticipants);
     };
 
     // Yeni katılımcı bildirimi
-    const handleNewParticipant = (participant: { username: string; isHost?: boolean }) => {
-      if (!participant.isHost) {
-        addNotification(`${participant.username} toplantıya katıldı`, 'success');
-      }
+    const handleNewParticipant = (participant: { username: string; teamName: string }) => {
+      addNotification(`${participant.username} toplantıya katıldı`, 'success');
+    };
+
+    // Ekip adı güncelleme
+    const handleTeamNameUpdate = (data: { teamName: string }) => {
+      setTeamName(data.teamName);
     };
 
     // Katılımcı ayrılma bildirimi
@@ -97,8 +107,25 @@ function Room() {
     // Event listener'ları ekle
     socket.on('participantsUpdate', handleParticipantsUpdate);
     socket.on('newParticipant', handleNewParticipant);
+    socket.on('teamNameUpdate', handleTeamNameUpdate);
     socket.on('participantLeft', handleParticipantLeft);
     socket.on('voteUpdate', handleVoteUpdate);
+    socket.on('votingStarted', () => {
+      console.log('Oylama başladı event alındı');
+      setIsVotingEnabled(true);
+      setSelectedCard(null);
+      addNotification('Oylama başladı!', 'success');
+    });
+    socket.on('roundStarted', () => {
+      console.log('Yeni tur başladı event alındı');
+      setIsVotingEnabled(false);
+      setSelectedCard(null);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        setRemainingTime(null);
+      }
+      addNotification('Eforlama baştan başlatılıyor...', 'success');
+    });
     socket.on('hostLeft', () => {
       addNotification('Moderatör toplantıdan ayrıldı. Ana sayfaya yönlendiriliyorsunuz.', 'error');
       setTimeout(() => {
@@ -110,18 +137,80 @@ function Room() {
     return () => {
       socket.off('participantsUpdate', handleParticipantsUpdate);
       socket.off('newParticipant', handleNewParticipant);
+      socket.off('teamNameUpdate', handleTeamNameUpdate);
       socket.off('participantLeft', handleParticipantLeft);
       socket.off('voteUpdate', handleVoteUpdate);
+      socket.off('votingStarted');
+      socket.off('roundStarted');
       socket.off('hostLeft');
+      setIsVotingEnabled(false);
     };
-  }, [socket, roomId, username, isConnected, addNotification, navigate]);
+  }, [socket, roomId, username, teamName, isConnected, addNotification, navigate]);
+
+  // Timer fonksiyonu
+  const startTimer = useCallback((duration: number) => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    setRemainingTime(duration);
+    
+    timerRef.current = setInterval(() => {
+      setRemainingTime(prev => {
+        if (prev === null || prev <= 0) {
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  // Timer'ı temizle
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Timer bittiğinde
+  useEffect(() => {
+    if (remainingTime === 0) {
+      setIsVotingEnabled(false);
+      addNotification('Oylama süresi doldu!', 'error');
+    }
+  }, [remainingTime, addNotification]);
+
+  const handleStartVoting = useCallback(() => {
+    if (!socket) return;
+    console.log('Oylama başlatılıyor...');
+    socket.emit('startVoting', { roomId });
+    setIsVotingEnabled(true);
+    startTimer(votingDuration);
+  }, [socket, roomId, votingDuration, startTimer]);
+
+  const handleNewRound = useCallback(() => {
+    if (!socket) return;
+    console.log('Yeni tur başlatılıyor...');
+    socket.emit('newRound', { roomId });
+    setIsVotingEnabled(false); // Oylama durumunu sıfırla
+    setSelectedCard(null);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      setRemainingTime(null);
+    }
+  }, [socket, roomId]);
 
   const handleVote = useCallback((value: number) => {
-    if (!socket) return;
+    if (!socket || !isVotingEnabled) return;
 
     setPendingVote(value);
     setShowVotePopup(true);
-  }, [socket]);
+  }, [socket, isVotingEnabled]);
 
   const handleConfirmVote = useCallback(() => {
     if (!socket || !pendingVote) return;
@@ -150,6 +239,13 @@ function Room() {
   }, [socket, roomId, username, navigate]);
 
   const cards = [1, 2, 3, 5, 8, 13, 21, 34, 55];
+
+  const formatTime = (seconds: number | null): string => {
+    if (seconds === null) return '00:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 sm:py-12">
@@ -209,7 +305,9 @@ function Room() {
             <RoomHeader
               roomId={roomId}
               username={username}
+              teamName={teamName}
               isHost={isHost}
+              onLeaveRoom={handleLeaveRoom}
             />
           </div>
 
@@ -218,21 +316,54 @@ function Room() {
             {/* Katılımcı Listesi - Sadece moderatör için */}
             {isHost && (
               <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
                     Katılımcılar
                   </h3>
-                  <button
-                    onClick={() => {
-                      if (socket) {
-                        socket.emit('startVoting', { roomId });
-                        addNotification('Oylama başlatıldı', 'success');
-                      }
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                  >
-                    Oylamayı Başlat
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {!isVotingEnabled && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-gray-600">Eforlama Süresi</label>
+                          <input
+                            type="number"
+                            min="10"
+                            max="300"
+                            value={votingDuration}
+                            onChange={(e) => setVotingDuration(Math.max(10, Math.min(300, parseInt(e.target.value) || 60)))}
+                            className="w-20 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Süre (sn)"
+                            title="Oylama süresini saniye cinsinden belirleyin (10-300 saniye)"
+                          />
+                        </div>
+                        <button
+                          onClick={handleStartVoting}
+                          className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                          Oylamayı Başlat
+                        </button>
+                        <button
+                          onClick={handleNewRound}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Sıfırla
+                        </button>
+                      </div>
+                    )}
+                    {isVotingEnabled && (
+                      <div className="flex items-center gap-4">
+                        <div className="text-lg font-semibold text-blue-600">
+                          {formatTime(remainingTime)}
+                        </div>
+                        <button
+                          onClick={handleNewRound}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          Sıfırla
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <ParticipantList participants={participants} />
               </div>
@@ -241,19 +372,27 @@ function Room() {
             {/* Fibonacci Kartları - Sadece katılımcılar için */}
             {!isHost && (
               <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 text-center">
-                  Fibonacci Kartları
-                </h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-4 sm:gap-6 max-w-5xl mx-auto">
-                  {cards.map((card) => (
-                    <Card
-                      key={card}
-                      value={card}
-                      isSelected={selectedCard === card}
-                      onSelect={handleVote}
-                    />
-                  ))}
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
+                    Fibonacci Kartları
+                  </h3>
                 </div>
+                {isVotingEnabled ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-4 sm:gap-6 max-w-5xl mx-auto">
+                    {cards.map((card) => (
+                      <Card
+                        key={card}
+                        value={card}
+                        isSelected={selectedCard === card}
+                        onSelect={handleVote}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500">
+                    Oylama henüz başlamadı. Moderatörün oylamayı başlatmasını bekleyin.
+                  </div>
+                )}
               </div>
             )}
 

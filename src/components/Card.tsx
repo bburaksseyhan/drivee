@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSound } from '../hooks/useSound';
 
 interface CardProps {
   value: number;
@@ -7,9 +8,16 @@ interface CardProps {
 }
 
 export const Card: React.FC<CardProps> = ({ value, isSelected, onSelect }) => {
+  const { playCardSound } = useSound();
+
+  const handleClick = () => {
+    playCardSound();
+    onSelect(value);
+  };
+
   return (
     <button
-      onClick={() => onSelect(value)}
+      onClick={handleClick}
       className={`
         relative w-full aspect-[3/4] rounded-xl shadow-lg transition-all duration-300
         ${isSelected 

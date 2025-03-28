@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSound } from '../hooks/useSound';
 
 interface VotePopupProps {
   isOpen: boolean;
@@ -8,6 +9,13 @@ interface VotePopupProps {
 }
 
 export const VotePopup: React.FC<VotePopupProps> = ({ isOpen, onClose, onConfirm, value }) => {
+  const { playConfirmSound } = useSound();
+
+  const handleConfirm = () => {
+    playConfirmSound();
+    onConfirm();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -27,7 +35,7 @@ export const VotePopup: React.FC<VotePopupProps> = ({ isOpen, onClose, onConfirm
             İptal
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirm}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Onayla

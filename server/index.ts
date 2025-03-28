@@ -5,38 +5,28 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000
-});
+app.use(cors());
 
-interface Room {
-  participants: Map<string, Participant>;
-  hostId: string;
-  effortItems: Map<string, EffortItem>;
-}
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"]
+  }
+});
 
 interface Participant {
   id: string;
   username: string;
+  teamName: string;
   vote?: number;
-  isHost: boolean;
 }
 
-interface EffortItem {
-  id: string;
-  title: string;
-  description: string;
-  status: 'pending' | 'voting' | 'completed';
-  votes: Record<string, number>;
+interface Room {
+  participants: Participant[];
+  hostId: string;
+  isVoting: boolean;
+  teamName: string;
 }
 
 const rooms = new Map<string, Room>();
@@ -44,9 +34,11 @@ const rooms = new Map<string, Room>();
 io.on('connection', (socket: Socket) => {
   console.log('Yeni bağlantı:', socket.id);
 
-  socket.on('joinRoom', (data: { roomId: string; username: string }) => {
-    const { roomId, username } = data;
+  socket.on('joinRoom', (data: { roomId: string; username: string; teamName: string }) => {
+    const { roomId, username, teamName } = data;
     const participantId = uuidv4();
+    const isFirstParticipant = !rooms.has(roomId);
+    const existingRoom = rooms.get(roomId);
 
     // Odaya katıl
     socket.join(roomId);
@@ -55,135 +47,103 @@ io.on('connection', (socket: Socket) => {
     const participant: Participant = {
       id: participantId,
       username,
-      isHost: !rooms.has(roomId) // İlk katılan kişi moderatör olur
+      teamName: isFirstParticipant ? teamName : existingRoom?.teamName || teamName
     };
 
     // Oda bilgilerini güncelle
-    if (!rooms.has(roomId)) {
+    if (isFirstParticipant) {
       rooms.set(roomId, {
-        participants: new Map(),
+        participants: [],
         hostId: participantId,
-        effortItems: new Map()
+        isVoting: false,
+        teamName: teamName
       });
     }
 
     const room = rooms.get(roomId)!;
-    room.participants.set(participantId, participant);
+    room.participants.push(participant);
+
+    // Katılımcıya mevcut ekip adını bildir
+    if (!isFirstParticipant) {
+      socket.emit('teamNameUpdate', { teamName: room.teamName });
+    }
 
     // Katılımcı listesini güncelle
-    const participants = Array.from(room.participants.values());
-    io.to(roomId).emit('participantsUpdate', participants);
-
-    // Eforlama listesini gönder
-    const effortItems = Array.from(room.effortItems.values());
-    socket.emit('effortItemsUpdate', effortItems);
+    io.to(roomId).emit('participantsUpdate', room.participants);
 
     // Yeni katılımcı bildirimi
-    socket.to(roomId).emit('newParticipant', { username });
+    socket.to(roomId).emit('newParticipant', { username, teamName: participant.teamName });
   });
 
-  socket.on('addEffort', (data: { roomId: string; effort: EffortItem }) => {
-    const { roomId, effort } = data;
+  socket.on('startVoting', ({ roomId }) => {
     const room = rooms.get(roomId);
-
+    
     if (room) {
-      room.effortItems.set(effort.id, effort);
-      const effortItems = Array.from(room.effortItems.values());
-      io.to(roomId).emit('effortItemsUpdate', effortItems);
-      io.to(roomId).emit('newEffort', effort);
+      // Tüm oyları sıfırla
+      room.participants.forEach(participant => {
+        participant.vote = undefined;
+      });
+      
+      // Odadaki herkese oylama başladı bilgisi gönder
+      io.to(roomId).emit('votingStarted');
+      io.to(roomId).emit('participantsUpdate', room.participants);
     }
   });
 
-  socket.on('startVoting', (data: { roomId: string; effortId: string }) => {
-    const { roomId, effortId } = data;
+  socket.on('newRound', ({ roomId }) => {
     const room = rooms.get(roomId);
-
     if (room) {
-      const effort = room.effortItems.get(effortId);
-      if (effort) {
-        effort.status = 'voting';
-        const effortItems = Array.from(room.effortItems.values());
-        io.to(roomId).emit('effortItemsUpdate', effortItems);
-        io.to(roomId).emit('effortUpdate', effort);
-      }
+      room.isVoting = false;
+      // Tüm katılımcıların oylarını sıfırla
+      room.participants.forEach(p => p.vote = undefined);
+      io.to(roomId).emit('participantsUpdate', room.participants);
+      io.to(roomId).emit('roundStarted');
     }
   });
 
-  socket.on('showResults', (data: { roomId: string; effortId: string }) => {
-    const { roomId, effortId } = data;
+  socket.on('vote', ({ roomId, username, vote }) => {
     const room = rooms.get(roomId);
+    if (!room) return;
 
-    if (room) {
-      const effort = room.effortItems.get(effortId);
-      if (effort) {
-        effort.status = 'completed';
-        const effortItems = Array.from(room.effortItems.values());
-        io.to(roomId).emit('effortItemsUpdate', effortItems);
-        io.to(roomId).emit('effortUpdate', effort);
-      }
-    }
-  });
-
-  socket.on('resetVoting', (data: { roomId: string; effortId: string }) => {
-    const { roomId, effortId } = data;
-    const room = rooms.get(roomId);
-
-    if (room) {
-      const effort = room.effortItems.get(effortId);
-      if (effort) {
-        effort.status = 'pending';
-        effort.votes = {};
-        const effortItems = Array.from(room.effortItems.values());
-        io.to(roomId).emit('effortItemsUpdate', effortItems);
-        io.to(roomId).emit('effortUpdate', effort);
-      }
-    }
-  });
-
-  socket.on('vote', (data: { roomId: string; username: string; vote: number }) => {
-    const { roomId, username, vote } = data;
-    const room = rooms.get(roomId);
-
-    if (room) {
-      const participant = Array.from(room.participants.values()).find(p => p.username === username);
-      if (participant) {
-        participant.vote = vote;
-        const participants = Array.from(room.participants.values());
-        io.to(roomId).emit('participantsUpdate', participants);
-        io.to(roomId).emit('voteUpdate', { username, vote });
-      }
-    }
-  });
-
-  socket.on('leaveRoom', ({ roomId, username }) => {
-    const room = rooms.get(roomId);
-    if (room) {
-      const participant = room.participants.find(p => p.username === username);
-      if (participant) {
-        // Eğer ayrılan kişi moderatör ise, tüm katılımcıları çıkart
-        if (participant.isHost) {
-          room.participants.forEach(p => {
-            const participantSocket = connectedUsers.get(p.username);
-            if (participantSocket) {
-              participantSocket.emit('hostLeft');
-            }
-          });
-          rooms.delete(roomId);
-        } else {
-          room.participants = room.participants.filter(p => p.username !== username);
-          io.to(roomId).emit('participantsUpdate', room.participants);
-          io.to(roomId).emit('participantLeft', { username });
-        }
-      }
+    // Katılımcının oyunu güncelle
+    const participant = room.participants.find(p => p.username === username);
+    if (participant) {
+      participant.vote = vote;
+      
+      // Tüm katılımcılara oy güncellemesini bildir
+      io.to(roomId).emit('voteUpdate', { username, vote });
+      io.to(roomId).emit('participantsUpdate', room.participants);
     }
   });
 
   socket.on('disconnect', () => {
-    console.log('Bağlantı koptu:', socket.id);
+    console.log('Client disconnected:', socket.id);
+    
+    // Tüm odaları kontrol et ve katılımcıyı çıkar
+    rooms.forEach((room, roomId) => {
+      const participantIndex = room.participants.findIndex(p => p.id === socket.id);
+      
+      if (participantIndex !== -1) {
+        const participant = room.participants[participantIndex];
+        
+        // Katılımcıyı odadan çıkar
+        room.participants.splice(participantIndex, 1);
+        
+        // Odada kimse kalmadıysa odayı sil
+        if (room.participants.length === 0) {
+          rooms.delete(roomId);
+        } else {
+          // Katılımcı listesini güncelle
+          io.to(roomId).emit('participantsUpdate', room.participants);
+          // Ayrılan katılımcı bilgisini gönder
+          io.to(roomId).emit('participantLeft', { username: participant.username });
+        }
+      }
+    });
   });
 });
 
-const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
